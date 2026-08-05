@@ -1,0 +1,72 @@
+# TestPsico — development stack (F1: api + db + redis; web added with the web scaffold).
+#
+# Every variable uses the ${VAR:-default} form so a bare
+# `docker compose up -d --build` works even without a .env file.
+# The defaults are DEV-ONLY and unsafe for any real deployment —
+# run `scripts/init-env` (or copy .env.example to .env) and override
+# them before doing anything beyond local development.
+name: psico
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-psico_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-psico_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-psico}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - psico_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-psico_app} -d ${POSTGRES_DB:-psico}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - psico_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: ./services/api
+    restart: unless-stopped
+    environment:
+      PSICO_ENV: ${PSICO_ENV:-dev}
+      PSICO_AUTH_MODE: ${PSICO_AUTH_MODE:-dev}
+      PSICO_JWT_SECRET: ${PSICO_JWT_SECRET:-psico-dev-jwt-secret-change-me}
+      PSICO_DEV_PASSWORD_ADMIN: ${PSICO_DEV_PASSWORD_ADMIN:-psico-dev-admin}
+      PSICO_DEV_PASSWORD_PSICOLOGO: ${PSICO_DEV_PASSWORD_PSICOLOGO:-psico-dev-psicologo}
+      PSICO_DEV_PASSWORD_EVALUADO: ${PSICO_DEV_PASSWORD_EVALUADO:-psico-dev-evaluado}
+      PSICO_DATABASE_URL: ${PSICO_DATABASE_URL:-postgresql+psycopg://psico_app:psico_dev_password@db:5432/psico}
+      PSICO_REDIS_URL: ${PSICO_REDIS_URL:-redis://redis:6379/0}
+      PSICO_AUDIT_RETENTION_DAYS: ${PSICO_AUDIT_RETENTION_DAYS:-365}
+      PSICO_LOG_LEVEL: ${PSICO_LOG_LEVEL:-INFO}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  psico_db_data:
+  psico_redis_data:

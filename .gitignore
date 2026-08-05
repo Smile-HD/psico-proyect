@@ -1,0 +1,24 @@
+# Environment / secrets — never commit real values
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# Tooling
+.idea/
+.vscode/
+*.swp
+.DS_Store

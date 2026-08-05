@@ -1,0 +1,4 @@
+# Normalize line endings: LF in the repo for everything, so shell scripts
+# (scripts/*.sh) never ship with CRLF and break on Unix.
+* text=auto eol=lf
+*.bat text eol=crlf

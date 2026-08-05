@@ -1,0 +1,68 @@
+schema: spec-driven
+
+context: |
+  Project: TestPsico — psychotechnical test system for vocational/educational
+  exploratory orientation. Initially UAGRM, designed for multi-institution deployment.
+  Stack: apps/web (Next.js + TypeScript), services/api (FastAPI, Pydantic v2,
+  SQLAlchemy 2, Alembic), PostgreSQL, Redis (Docker Compose), R + renv + Quarto
+  offline analytics, Docker Compose orchestration.
+  Domain invariants: (1) versioned immutable instruments — published tests are never
+  edited; changes create a new instrument_version_id and sessions keep the exact
+  version; (2) pure scoring function — responses + instrument version + reference
+  in, scores out (raw -> direct -> transformed: percentile/T/eneatype); no DB
+  access, no side effects; (3) declarative explainable recommendation — rules live
+  in DB (not code), profile x program catalog -> fit score + traceable
+  justification; no LLM in the MVP productive path.
+  Phases/owners: F1 Fundación/acceso (Marces), F2 Catálogo de instrumentos (Trevor),
+  F3 Sesión de evaluación (Jhamil), F4 Motor de calificación (Juan Carlos),
+  F5 Perfiles/recomendación (Piere), F6 Informes/integración (Ivan).
+  Data policy: everything is synthetic and marked `synthetic`/`research-only`;
+  no real UAGRM data or claims.
+
+testing:
+  strict_tdd: false
+  detected: "2026-08-05"
+  test_runner: null
+  test_runner_reason: "Repo has no code yet; no package.json, pyproject.toml, or CI config detected. strict_tdd will be enabled once a runner is introduced."
+  layers:
+    unit: { available: false, tool: null }
+    integration: { available: false, tool: null }
+    e2e: { available: false, tool: null }
+  coverage: { available: false, command: null }
+  quality:
+    linter: { available: false, command: null }
+    type_checker: { available: false, command: null }
+    formatter: { available: false, command: null }
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - State which phase(s) and owner(s) the change touches
+    - Confirm impact on immutable instrument versioning before proposing edits to published instruments
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Keep pure scoring contract explicit: inputs (responses + instrument version + reference) and outputs (raw/direct/transformed)
+    - All test data MUST be synthetic and marked `synthetic`/`research-only`
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+    - Respect layering: scoring engine must stay free of DB access and side effects
+    - Recommendations are rule-driven (DB), never LLM-driven in the MVP productive path
+  tasks:
+    - Group by phase (F1-F6), use hierarchical numbering
+    - Keep tasks completable in one session
+    - Tag tasks with the owning phase for traceability
+  apply:
+    guidelines:
+      - Follow existing code patterns
+      - Never modify a published instrument; introduce a new instrument_version_id instead
+      - Keep all data synthetic and research-only
+    tdd: false
+    test_command: ""
+  verify:
+    test_command: ""
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas

@@ -52,7 +52,7 @@ class ReferenceValue(Base, SyntheticMixin):
     __tablename__ = "reference_values"
     __table_args__ = (
         UniqueConstraint(
-            "reference_set_id", "scale", "value_type", name="uq_reference_value"
+            "reference_set_id", "scale", "value_type", "raw_value", name="uq_reference_value"
         ),
     )
 

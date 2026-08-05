@@ -42,7 +42,7 @@ docker compose run --rm api alembic upgrade head
 docker compose run --rm api python -m app.seed
 
 # 5. Run the test suite
-docker compose run --rm api pytest
+scripts/test.sh            # Windows: scripts\test.ps1
 ```
 
 The web page is at http://localhost:3000 (health + seed status, Spanish UI).
@@ -57,7 +57,7 @@ The API is at http://localhost:8000 (`/health`, `/api/v1/seed/status` are public
 | Seed (idempotent) | `docker compose run --rm api python -m app.seed` |
 | Reset seed only (seed-owned rows) | `docker compose run --rm api python -m app.seed --reset` |
 | Clean dev environment (drops volumes) | `docker compose down -v` |
-| Minimal tests | `docker compose run --rm api pytest` |
+| Minimal tests | `scripts/test` (`.sh` or `.ps1`; mounts the repo read-only at `/repo`) |
 | Env bootstrap | `scripts/init-env` (`.sh` or `.ps1`) |
 
 Every task above has an equivalent wrapper under `scripts/` (`.sh` + `.ps1`
@@ -92,3 +92,27 @@ UUID5 `psico-seed:` keys), the single error envelope, and the audit deny-list.
   seed-owned rows.
 - Tests: `pytest -k scripts|schema|auth|audit|consent|seed|web` to run a
   focused slice.
+
+## Verifying the seed is safe (no real data, no secrets)
+
+The repository ships NO real UAGRM norms, no real people, and no real secrets.
+These checks confirm it on any clone:
+
+1. **Fixture markers** — every seeded row sets `synthetic = true` and
+   `source = 'seed'` where those columns exist. The reference set is
+   `reference_status = 'synthetic'`, `use = 'research-only'`, and its
+   `norm_note` is the visible disclaimer:
+   `"NO es una norma UAGRM. Datos inventados para desarrollo."`
+2. **Names** — the 30 profiles use fictional personas (`evaluado_01` …
+   `evaluado_30`, "Perfil Sintetico NN"); no real student, therapist, or
+   institution names appear in `app/seed/fixtures/`.
+3. **Secrets** — `.env.example` holds dev-only defaults (weak dev passwords,
+   `psico_dev_password_*`, JWT secret placeholder). Real credentials belong
+   only in your local gitignored `.env`; never commit `.env`.
+4. **Audit deny-list** — `audit_log.metadata` never stores responses, tokens,
+   passwords, or instrument content (enforced by convention and asserted in
+   `tests/test_audit.py`).
+5. **Automated proof** — the suite asserts all of the above:
+   `scripts/test` (or `scripts\test.ps1`), then `pytest -k seed|scripts`.
+   `test_reference_fixture_research_only` and the deny-list tests fail if a
+   real-looking value or secret ever sneaks into the fixtures.

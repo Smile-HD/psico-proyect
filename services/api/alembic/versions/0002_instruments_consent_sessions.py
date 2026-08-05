@@ -1,6 +1,6 @@
 """instruments + consent + sessions families (consent before sessions: FK)
 
-Revision ID: 0002_instruments_consent_sessions
+Revision ID: 0002_instruments_consent
 Revises: 0001_identity_institutions
 Create Date: 2026-08-05
 """
@@ -9,7 +9,7 @@ from __future__ import annotations
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0002_instruments_consent_sessions"
+revision = "0002_instruments_consent"
 down_revision = "0001_identity_institutions"
 branch_labels = None
 depends_on = None

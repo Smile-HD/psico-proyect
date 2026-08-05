@@ -2,8 +2,8 @@
 
 F5/F6 tables are created empty-but-migrated.
 
-Revision ID: 0003_scoring_recommendation_reporting_audit_seed
-Revises: 0002_instruments_consent_sessions
+Revision ID: 0003_scoring_recommendation
+Revises: 0002_instruments_consent
 Create Date: 2026-08-05
 """
 from __future__ import annotations
@@ -11,8 +11,8 @@ from __future__ import annotations
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0003_scoring_recommendation_reporting_audit_seed"
-down_revision = "0002_instruments_consent_sessions"
+revision = "0003_scoring_recommendation"
+down_revision = "0002_instruments_consent"
 branch_labels = None
 depends_on = None
 
@@ -49,7 +49,7 @@ def upgrade() -> None:
         sa.Column("source", sa.String(length=32), server_default="runtime", nullable=False),
         sa.ForeignKeyConstraint(["reference_set_id"], ["reference_sets.id"]),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("reference_set_id", "scale", "value_type", name="uq_reference_value"),
+        sa.UniqueConstraint("reference_set_id", "scale", "value_type", "raw_value", name="uq_reference_value"),
     )
     op.create_index("ix_reference_values_reference_set_id", "reference_values", ["reference_set_id"], unique=False)
     op.create_table(

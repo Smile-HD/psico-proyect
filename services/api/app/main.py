@@ -16,6 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.router import api_router
+from app.api.routes.health import router as health_router
 from app.core.config import settings
 from app.core.errors import (
     ApiError,
@@ -48,5 +49,8 @@ app.add_exception_handler(ApiError, api_error_handler)
 app.add_exception_handler(StarletteHTTPException, http_error_handler)
 app.add_exception_handler(RequestValidationError, validation_handler)
 app.add_exception_handler(Exception, exception_handler)
+
+# Root-level public health endpoint (used by the compose healthcheck).
+app.include_router(health_router)
 
 app.include_router(api_router)

@@ -16,7 +16,10 @@ import uuid
 from pathlib import Path
 
 import pytest
-from sqlalchemy import func, select, text
+from alembic import command
+from sqlalchemy import create_engine, func, select, text
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
 from app.models.consent import ConsentGrant
 from app.models.instruments import InstrumentItem
@@ -31,6 +34,51 @@ from app.seed.loader import (
     run_seed,
     seed_id,
 )
+from tests.conftest import alembic_config
+from tests.db_utils import SKIP_MESSAGE, db_reachable, db_url, maintenance_url
+
+# --------------------------------------------------------------------------- #
+# DB isolation: seed tests mutate the database heavily (reset + reseed), so
+# they run against their own throwaway database instead of the session-scoped
+# shared DB that consent/auth tests use.
+# --------------------------------------------------------------------------- #
+
+
+def _new_test_database(url: str) -> tuple[str, str]:
+    """Create a throwaway database on the same server; return (name, url)."""
+    dbname = f"psico_seed_test_{uuid.uuid4().hex[:12]}"
+    maint = create_engine(maintenance_url(url), isolation_level="AUTOCOMMIT")
+    with maint.connect() as conn:
+        conn.execute(text(f'CREATE DATABASE "{dbname}"'))
+    maint.dispose()
+    base, _, _ = url.rpartition("/")
+    return dbname, f"{base}/{dbname}"
+
+
+@pytest.fixture(scope="module")
+def engine():
+    url = db_url()
+    if not db_reachable(url):
+        pytest.skip(SKIP_MESSAGE)
+    dbname, test_url = _new_test_database(url)
+    command.upgrade(alembic_config(test_url), "head")
+    # NullPool: release every connection immediately so teardown can drop the
+    # throwaway database without ObjectInUse errors.
+    eng = create_engine(test_url, poolclass=NullPool)
+    yield eng
+    eng.dispose()
+    maint = create_engine(maintenance_url(url), isolation_level="AUTOCOMMIT")
+    with maint.connect() as conn:
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{dbname}"'))
+    maint.dispose()
+
+
+@pytest.fixture(scope="module")
+def db_session(engine):
+    Session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+    session = Session()
+    yield session
+    session.close()
 
 # --------------------------------------------------------------------------- #
 # Pure: deterministic ids and fixture structure
@@ -93,7 +141,8 @@ def test_checksum_deterministic() -> None:
 def _snapshot(db_session) -> dict:
     snap = {}
     for table in ("instruments", "instrument_items", "sessions", "responses",
-                  "reference_sets", "consent_grants", "users", "roles"):
+                  "reference_sets", "reference_values", "consent_grants",
+                  "users", "roles"):
         snap[table] = db_session.scalar(
             text(f"SELECT COUNT(*) FROM {table} WHERE source = 'seed'")
         )

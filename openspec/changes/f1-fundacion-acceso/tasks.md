@@ -57,4 +57,4 @@ Chain strategy: pending
 
 - [x] 5.1 `apps/web` page (ES): health + seed status via compose network
 - [x] 5.2 API unreachable → friendly Spanish error, no stack trace
-- [ ] 5.3 Verify Win+Unix: up + migrate + seed + full `pytest`; README check
+- [x] 5.3 Verify Win+Unix: up + migrate + seed + full `pytest`; README check

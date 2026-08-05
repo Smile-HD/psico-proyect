@@ -93,7 +93,26 @@ Seed invariants: every seeded row sets `synthetic = true` and
 `source = 'seed'` where those columns exist; `--reset` removes only seed-owned
 rows in reverse FK order; all data is research-only.
 
-## 5. Access matrix (deny-by-default)
+## 5. Base entities: institution hierarchy
+
+Every row in the institutional hierarchy carries `institution_id` (FK to
+`institutions.id`); seed creates one synthetic institution plus one
+campus/faculty/program so every later phase can join through the same root.
+
+| Entity | Table | Key fields |
+|---|---|---|
+| Institution | `institutions` | `id`, `name`, `synthetic`, `source` |
+| Campus | `campuses` | `id`, `institution_id`, `name`, `synthetic`, `source` |
+| Faculty | `faculties` | `id`, `institution_id`, `name`, `synthetic`, `source` |
+| Program | `programs` | `id`, `institution_id`, `name`, `synthetic`, `source` |
+
+- Relationship rule: `campus`/`faculty`/`program` never float without an
+  owning institution; the FK is NOT NULL.
+- `institution_id` is the join key every downstream phase consumes
+  (instrument ownership, session context, reporting rollups).
+- All seed rows in this family set `synthetic = true` / `source = 'seed'`.
+
+## 6. Access matrix (deny-by-default)
 
 Every protected route MUST declare `require_roles(...)`; there is no
 default-allow. See `services/api/app/core/permissions.py` (source of truth):

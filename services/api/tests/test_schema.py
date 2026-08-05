@@ -19,6 +19,7 @@ from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.pool import NullPool
 
 from tests.db_utils import SKIP_MESSAGE, db_reachable, db_url, maintenance_url
 from tests.conftest import alembic_config
@@ -75,6 +76,12 @@ def _new_test_database(url: str) -> tuple[str, str]:
     return dbname, f"{base}/{dbname}"
 
 
+def _schema_engine(url: str):
+    """Engine against a throwaway schema DB. NullPool so every connection is
+    released immediately, letting the fixture drop the database at teardown."""
+    return create_engine(url, poolclass=NullPool)
+
+
 @pytest.fixture(scope="module")
 def schema_url():
     url = db_url()
@@ -83,16 +90,16 @@ def schema_url():
     dbname, test_url = _new_test_database(url)
     command.upgrade(alembic_config(test_url), "head")
     yield test_url
-    engine = create_engine(test_url)
+    engine = create_engine(test_url, poolclass=NullPool)
     engine.dispose()
     maint = create_engine(maintenance_url(url), isolation_level="AUTOCOMMIT")
     with maint.connect() as conn:
-        conn.execute(text(f'DROP DATABASE IF EXISTS "{dbname}"'))
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{dbname}" WITH (FORCE)'))
     maint.dispose()
 
 
 def test_fresh_upgrade_creates_all_families(schema_url: str) -> None:
-    inspector = inspect(create_engine(schema_url))
+    inspector = inspect(_schema_engine(schema_url))
     tables = set(inspector.get_table_names())
     missing = EXPECTED_TABLES - tables
     assert not missing, f"missing tables: {sorted(missing)}"
@@ -102,7 +109,7 @@ def test_fresh_upgrade_creates_all_families(schema_url: str) -> None:
 
 
 def test_unique_constraints_present(schema_url: str) -> None:
-    inspector = inspect(create_engine(schema_url))
+    inspector = inspect(_schema_engine(schema_url))
     uniques = {
         "roles": {"name"},
         "instruments": {"key"},
@@ -119,7 +126,7 @@ def test_unique_constraints_present(schema_url: str) -> None:
 
 
 def test_check_constraints_present(schema_url: str) -> None:
-    inspector = inspect(create_engine(schema_url))
+    inspector = inspect(_schema_engine(schema_url))
     checks = {
         "responses": ["ck_value_1_to_5"],
         "instrument_items": ["ck_scale_order_1_to_5"],
@@ -137,7 +144,7 @@ def test_upgrade_is_idempotent(schema_url: str) -> None:
     # Already at head from the fixture; running upgrade head again must not
     # execute any migration and must not raise.
     command.upgrade(alembic_config(schema_url), "head")
-    engine = create_engine(schema_url)
+    engine = _schema_engine(schema_url)
     with engine.connect() as conn:
         revision = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
     engine.dispose()
@@ -160,7 +167,7 @@ def test_linear_history() -> None:
 
 
 def test_f5_f6_empty_but_migrated(schema_url: str) -> None:
-    engine = create_engine(schema_url)
+    engine = _schema_engine(schema_url)
     with engine.connect() as conn:
         for table in sorted(F5_F6_TABLES):
             count = conn.execute(text(f'SELECT COUNT(*) FROM "{table}"')).scalar()
@@ -169,7 +176,7 @@ def test_f5_f6_empty_but_migrated(schema_url: str) -> None:
 
 
 def test_append_only_trigger_installed(schema_url: str) -> None:
-    engine = create_engine(schema_url)
+    engine = _schema_engine(schema_url)
     with engine.connect() as conn:
         rows = conn.execute(
             text(

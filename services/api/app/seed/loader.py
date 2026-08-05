@@ -85,11 +85,11 @@ def _load_json(name: str) -> dict:
     return json.loads((FIXTURES_DIR / name).read_text(encoding="utf-8"))
 
 
-def _upsert(db: Session, model, row: dict) -> None:
+def _upsert(db: Session, model, row: dict, conflict_cols: list[str] | None = None) -> None:
     stmt = (
         pg_insert(model)
         .values(**row)
-        .on_conflict_do_nothing(index_elements=[model.id])
+        .on_conflict_do_nothing(index_elements=conflict_cols or [model.id])
     )
     db.execute(stmt)
 
@@ -148,14 +148,14 @@ def _seed_rows(db: Session) -> None:
             "role_id": seed_id(role_key),
             "synthetic": True,
             "source": "seed",
-        })
+        }, conflict_cols=["user_id", "role_id"])
     for profile in profiles:
         _upsert(db, UserRole, {
             "user_id": seed_id(profile["key"]),
             "role_id": seed_id("role:evaluado"),
             "synthetic": True,
             "source": "seed",
-        })
+        }, conflict_cols=["user_id", "role_id"])
 
     # --- institutions (1 synthetic institution, no real UAGRM data) ----------
     inst_id = seed_id("institution:dev")

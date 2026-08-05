@@ -7,7 +7,7 @@
   enforcement.
 
 Revision ID: 0004_audit_append_only_trigger
-Revises: 0003_scoring_recommendation_reporting_audit_seed
+Revises: 0003_scoring_recommendation
 Create Date: 2026-08-05
 """
 from __future__ import annotations
@@ -15,7 +15,7 @@ from __future__ import annotations
 from alembic import op
 
 revision = "0004_audit_append_only_trigger"
-down_revision = "0003_scoring_recommendation_reporting_audit_seed"
+down_revision = "0003_scoring_recommendation"
 branch_labels = None
 depends_on = None
 

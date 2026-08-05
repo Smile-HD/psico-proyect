@@ -1,4 +1,4 @@
-# TestPsico — development stack (F1: api + db + redis; web added with the web scaffold).
+# TestPsico — development stack (F1: api + db + redis + web).
 #
 # Every variable uses the ${VAR:-default} form so a bare
 # `docker compose up -d --build` works even without a .env file.
@@ -66,6 +66,24 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
+
+  web:
+    build:
+      context: ./apps/web
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-http://api:8000}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
 volumes:
   psico_db_data:

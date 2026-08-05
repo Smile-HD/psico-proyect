@@ -1,0 +1,54 @@
+{
+  "key": "TP-S-01",
+  "title": "Test Psicométrico Sintético — Orientación Vocacional (research-only)",
+  "description": "Instrumento sintético de 20 ítems (5 escalas × 4) en escala Likert 1–5. Datos inventados para desarrollo; no es una prueba real ni una norma UAGRM.",
+  "version_no": 1,
+  "status": "published",
+  "scales": [
+    {
+      "scale": "Intereses",
+      "items": [
+        { "order": 1, "text": "Prefiero actividades donde pueda explorar temas nuevos por mi cuenta." },
+        { "order": 2, "text": "Disfruto aprender sobre cómo funcionan las cosas en detalle." },
+        { "order": 3, "text": "Me atraen las tareas relacionadas con la naturaleza y el entorno." },
+        { "order": 4, "text": "Elijo pasatiempos que me permiten crear algo con mis manos." }
+      ]
+    },
+    {
+      "scale": "Aptitud verbal",
+      "items": [
+        { "order": 1, "text": "Se me facilita expresar mis ideas por escrito." },
+        { "order": 2, "text": "Comprendo rápidamente textos largos y complejos." },
+        { "order": 3, "text": "Disfruto las discusiones donde hay que argumentar con palabras." },
+        { "order": 4, "text": "Recuerdo con facilidad palabras nuevas y sus significados." }
+      ]
+    },
+    {
+      "scale": "Aptitud numérica",
+      "items": [
+        { "order": 1, "text": "Resuelvo problemas de números con confianza." },
+        { "order": 2, "text": "Hago cálculos mentales con rapidez." },
+        { "order": 3, "text": "Me gusta interpretar tablas y gráficos con datos." },
+        { "order": 4, "text": "Disfruto los desafíos matemáticos aunque lleven tiempo." }
+      ]
+    },
+    {
+      "scale": "Razonamiento abstracto",
+      "items": [
+        { "order": 1, "text": "Identifico patrones en secuencias de figuras o símbolos." },
+        { "order": 2, "text": "Me resulta natural pensar en términos de relaciones lógicas." },
+        { "order": 3, "text": "Resuelvo acertijos de lógica sin ayuda." },
+        { "order": 4, "text": "Puedo imaginar objetos desde distintos ángulos mentalmente." }
+      ]
+    },
+    {
+      "scale": "Valores/preferencias",
+      "items": [
+        { "order": 1, "text": "Valoro más la estabilidad que los desafíos constantes." },
+        { "order": 2, "text": "Prefiero trabajar en equipo antes que en solitario." },
+        { "order": 3, "text": "Me importa que mi trabajo tenga un impacto social claro." },
+        { "order": 4, "text": "Priorizo el equilibrio entre vida personal y trabajo." }
+      ]
+    }
+  ]
+}

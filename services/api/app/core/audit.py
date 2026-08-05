@@ -30,8 +30,21 @@ EVENT_CATALOG = {
     "seed.executed",
 }
 
-# Substrings that MUST NEVER appear in audit metadata (deny-list).
-DENY_LIST = ("password", "token", "response", "item_text", "pii", "secret")
+# Substrings that MUST NEVER appear in audit metadata (deny-list). Checks are
+# on content-bearing terms: raw responses/answers, tokens/passwords/secrets,
+# instrument item text, and PII beyond the actor id. Aggregates like
+# "response_count" or "duration_s" are explicitly allowed.
+DENY_LIST = (
+    "password",
+    "token",
+    "responses",
+    "answers",
+    "item_text",
+    "item_content",
+    "email",
+    "pii",
+    "secret",
+)
 
 
 def assert_deny_list(metadata: dict | None) -> None:

@@ -153,14 +153,6 @@ def test_jwt_roundtrip_carries_role() -> None:
 # --------------------------------------------------------------------------- #
 
 
-@pytest.fixture(scope="session")
-def seeded_db_session(engine, db_session):
-    from app.seed.loader import run_seed
-
-    run_seed(db_session)
-    return db_session
-
-
 @pytest.fixture
 def client():
     with TestClient(app) as c:

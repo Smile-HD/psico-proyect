@@ -39,3 +39,12 @@ def db_session(engine):
     session = Session()
     yield session
     session.close()
+
+
+@pytest.fixture(scope="session")
+def seeded_db_session(engine, db_session):
+    """Migrated + seeded database (seed is idempotent, safe to rerun)."""
+    from app.seed.loader import run_seed
+
+    run_seed(db_session)
+    return db_session

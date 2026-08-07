@@ -1,0 +1,24 @@
+# Build-context hygiene for the API image.
+# The Dockerfile does `COPY . .`, so anything in this context gets baked in.
+# Mirror the essentials of the root .gitignore plus context-specific entries.
+
+# Secrets — never bake .env into the image
+.env
+*.env.local
+
+# Python dev cruft
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Not needed in the runtime image: tests run from the read-only /repo mount
+tests/
+
+# VCS / editor
+.git
+.idea/
+.vscode/

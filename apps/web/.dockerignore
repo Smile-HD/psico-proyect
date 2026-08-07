@@ -1,0 +1,19 @@
+# Build-context hygiene for the web image.
+# The build stage runs `COPY . .` over the Linux deps from the `deps` stage;
+# excluding local dev output prevents Windows/macOS artifacts from poisoning
+# the Linux build.
+
+# Secrets — never bake Next.js env files into the image
+.env
+*.env.local
+
+# Node / Next.js dev cruft
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# VCS / editor
+.git
+.idea/
+.vscode/

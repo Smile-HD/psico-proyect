@@ -1,10 +1,12 @@
+﻿# Delta Spec: contracts
+
 # Contracts Specification
 
 ## Purpose
 
 Binding conventions consumed by F2–F6: ID format, single error envelope with `request_id`, and contract language. Published in `packages/contracts/` and this spec, not implicit in code.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: ID Convention
 
@@ -70,3 +72,4 @@ The technical contract (IDs, error codes, seed manifest schema) MUST be in Engli
 - GIVEN the error envelope
 - WHEN inspecting `code` and `message`
 - THEN both are English tokens (e.g., `FORBIDDEN`, `insufficient_role`)
+

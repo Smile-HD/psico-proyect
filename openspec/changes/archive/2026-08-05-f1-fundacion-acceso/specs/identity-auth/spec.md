@@ -1,10 +1,12 @@
+﻿# Delta Spec: identity-auth
+
 # Identity & Auth Specification
 
 ## Purpose
 
 Dev-first identity: seeded 3-role accounts, JWT login, deny-by-default role middleware with safe denials and an OIDC seam behind `PSICO_AUTH_MODE`.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: User/Role Schema
 
@@ -88,3 +90,4 @@ JWTs MUST carry an `exp` claim and be rejected after expiry. The system MUST exp
 - WHEN the previous token is presented
 - THEN the request is rejected
 - AND the user must re-authenticate to obtain a token carrying the new role
+

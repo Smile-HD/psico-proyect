@@ -1,10 +1,12 @@
+﻿# Delta Spec: audit-consent
+
 # Audit & Consent Specification
 
 ## Purpose
 
 Append-only audit trail with a deny-list, plus a versioned consent registry that gates session creation.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Append-only Audit Log
 
@@ -75,3 +77,4 @@ A session MUST reference a consent grant in state `granted` for its user. Withou
 - WHEN a session is requested
 - THEN the session is created
 - AND `session.started` is audited
+

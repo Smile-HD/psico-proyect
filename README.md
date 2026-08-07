@@ -1,118 +1,124 @@
 # TestPsico
 
-Psychotechnical test system for vocational/educational exploratory orientation
-(buildings blocks for UAGRM and multi-institution deployment). Everything in the
-repository is **synthetic and research-only** — no real UAGRM norms, people, or
-data.
+Sistema de tests psicotécnicos para orientación vocacional/educativa exploratoria
+(bloques base para UAGRM y despliegue multi-institucional). Todo el contenido del
+repositorio es **sintético y solo para investigación** — sin normas reales de
+UAGRM, sin personas reales ni datos reales.
 
-F1 (this baseline) makes a fresh clone runnable in under 10 minutes on any
-machine with Docker Engine + Compose v2 (Windows, macOS, Linux): a FastAPI
-service, PostgreSQL, Redis, a migrated nine-family schema, an idempotent
-synthetic seed, and a minimal Spanish web page that proves the compose network.
+La F1 (esta base) hace que un clon nuevo sea ejecutable en menos de 10 minutos en
+cualquier máquina con Docker Engine + Compose v2 (Windows, macOS, Linux): un
+servicio FastAPI, PostgreSQL, Redis, un esquema migrado de nueve familias, una
+semilla sintética idempotente y una página web mínima en español que prueba la red
+de Compose.
 
 ```
 psico/
-├── docker-compose.yml        # api + db + redis (+ web) dev stack
-├── .env.example              # PSICO_* safe dev defaults (mirrored by Settings)
-├── scripts/                  # cross-platform wrappers (.sh + .ps1)
-├── packages/contracts/       # binding conventions for all phases (EN)
+├── docker-compose.yml        # stack dev: api + db + redis (+ web)
+├── .env.example              # defaults dev seguros PSICO_* (espejados por Settings)
+├── scripts/                  # wrappers multiplataforma (.sh + .ps1)
+├── packages/contracts/       # convenciones vinculantes para todas las fases (EN)
 ├── services/api/             # FastAPI + SQLAlchemy 2 + Alembic
-├── apps/web/                 # Next.js Spanish health/seed page
-└── openspec/                 # SDD planning artifacts
+├── apps/web/                 # página Next.js en español (salud + semilla)
+└── openspec/                 # artefactos de planificación SDD
 ```
 
-## Prerequisites
+## Requisitos previos
 
 - Docker Engine + Compose v2
-- Free ports 8000 (api), 5432 (db), 6379 (redis), 3000 (web)
+- Puertos libres 8000 (api), 5432 (db), 6379 (redis), 3000 (web)
 
-## Quick start
+## Inicio rápido
 
 ```bash
-# 1. Bootstrap env (creates .env from .env.example if missing)
+# 1. Bootstrap del entorno (crea .env a partir de .env.example si no existe)
 scripts/init-env.sh            # Windows: scripts\init-env.ps1
 
-# 2. Build and start the stack (works with NO .env: dev-only defaults)
+# 2. Build y arranque del stack (funciona SIN .env: defaults dev-only)
 docker compose up -d --build
 
-# 3. Apply the schema
+# 3. Aplicar el esquema
 docker compose run --rm api alembic upgrade head
 
-# 4. Seed synthetic data (idempotent; run twice and counts stay identical)
+# 4. Sembrar datos sintéticos (idempotente; ejecutalo dos veces y los conteos quedan iguales)
 docker compose run --rm api python -m app.seed
 
-# 5. Run the test suite
+# 5. Correr la suite de tests
 scripts/test.sh            # Windows: scripts\test.ps1
 ```
 
-The web page is at http://localhost:3000 (health + seed status, Spanish UI).
-The API is at http://localhost:8000 (`/health`, `/api/v1/seed/status` are public).
+La página web está en http://localhost:3000 (salud + estado de la semilla, UI en
+español). La API está en http://localhost:8000 (`/health`, `/api/v1/seed/status`
+son públicos).
 
-## Official commands
+## Comandos oficiales
 
-| Task | Command |
+| Tarea | Comando |
 |---|---|
 | Up (api + db + redis + web) | `docker compose up -d --build` |
-| Migrate | `docker compose run --rm api alembic upgrade head` |
-| Seed (idempotent) | `docker compose run --rm api python -m app.seed` |
-| Reset seed only (seed-owned rows) | `docker compose run --rm api python -m app.seed --reset` |
-| Clean dev environment (drops volumes) | `docker compose down -v` |
-| Minimal tests | `scripts/test` (`.sh` or `.ps1`; mounts the repo read-only at `/repo`) |
-| Env bootstrap | `scripts/init-env` (`.sh` or `.ps1`) |
+| Migrar | `docker compose run --rm api alembic upgrade head` |
+| Sembrar (idempotente) | `docker compose run --rm api python -m app.seed` |
+| Reset solo de la semilla (filas seed-owned) | `docker compose run --rm api python -m app.seed --reset` |
+| Limpiar entorno dev (borra volúmenes) | `docker compose down -v` |
+| Tests mínimos | `scripts/test` (`.sh` o `.ps1`; monta el repo read-only en `/repo`) |
+| Bootstrap de env | `scripts/init-env` (`.sh` o `.ps1`) |
 
-Every task above has an equivalent wrapper under `scripts/` (`.sh` + `.ps1`
-twins that run the exact same `docker compose` command).
+Cada tarea tiene su wrapper equivalente en `scripts/` (pares `.sh` + `.ps1` que
+ejecutan exactamente el mismo comando de `docker compose`).
 
-## Environment
+## Entorno
 
-- App config uses the `PSICO_*` prefix; infra uses `POSTGRES_*` / `REDIS_*`.
-- `.env.example` holds safe dev-only defaults and is committed; `.env` is
-  gitignored. `app/core/config.py` (pydantic-settings) mirrors the example
-  exactly so container and host never drift.
-- Compose uses `${VAR:-default}` everywhere, so bare `up` works — but the
-  defaults are dev-only; the API logs a warning at startup when it detects
-  them. Never ship these defaults anywhere real.
-- Run `scripts/init-env` once to create a personal `.env` you can override.
+- La config de la app usa el prefijo `PSICO_*`; la infraestructura usa
+  `POSTGRES_*` / `REDIS_*`.
+- `.env.example` contiene defaults dev-only seguros y está commiteado; `.env`
+  está gitignored. `app/core/config.py` (pydantic-settings) espeja el ejemplo
+  exactamente para que contenedor y host nunca diverjan.
+- Compose usa `${VAR:-default}` en todos lados, así que `up` a secas funciona —
+  pero los defaults son dev-only; la API loguea un warning al arranque cuando los
+  detecta. Nunca los lleves a un entorno real.
+- Ejecutá `scripts/init-env` una vez para crear un `.env` propio que puedas
+  sobreescribir.
 
-## Conventions (consumed by all phases)
+## Convenciones (consumidas por todas las fases)
 
-See `packages/contracts/README.md` — binding rules for IDs (UUID4 runtime,
-UUID5 `psico-seed:` keys), the single error envelope, and the audit deny-list.
+Ver `packages/contracts/README.md` — reglas vinculantes para IDs (UUID4 en
+runtime, claves UUID5 `psico-seed:`), el envelope único de errores y la
+deny-list de auditoría.
 
-- Technical contract tokens (codes, IDs, fields) are English.
-- Human-facing UI texts are Spanish.
-- Published instrument versions are immutable (schema-enforced).
-- `audit_log` is append-only (DB trigger rejects UPDATE/DELETE).
-- No scoring/recommendation rules live in the client; no LLM in the MVP path.
+- Los tokens técnicos del contrato (códigos, IDs, campos) están en inglés.
+- Los textos UI dirigidos a personas están en español.
+- Las versiones publicadas de instrumentos son inmutables (aplicado por esquema).
+- `audit_log` es append-only (trigger de DB rechaza UPDATE/DELETE).
+- No hay reglas de scoring/recomendación en el cliente; sin LLM en el camino
+  del MVP.
 
-## Development notes
+## Notas de desarrollo
 
-- Migrations are schema-only and form ONE linear Alembic chain.
-- The seed is deterministic (UUID5) and additive; `--reset` removes only
-  seed-owned rows.
-- Tests: `pytest -k scripts|schema|auth|audit|consent|seed|web` to run a
-  focused slice.
+- Las migraciones son solo de esquema y forman UNA cadena lineal de Alembic.
+- La semilla es determinística (UUID5) y aditiva; `--reset` borra solo las filas
+  seed-owned.
+- Tests: `pytest -k scripts|schema|auth|audit|consent|seed|web` para correr un
+  slice puntual.
 
-## Verifying the seed is safe (no real data, no secrets)
+## Verificar que la semilla es segura (sin datos reales, sin secretos)
 
-The repository ships NO real UAGRM norms, no real people, and no real secrets.
-These checks confirm it on any clone:
+El repositorio NO trae normas reales de UAGRM, personas reales ni secretos
+reales. Estos checks lo confirman en cualquier clon:
 
-1. **Fixture markers** — every seeded row sets `synthetic = true` and
-   `source = 'seed'` where those columns exist. The reference set is
-   `reference_status = 'synthetic'`, `use = 'research-only'`, and its
-   `norm_note` is the visible disclaimer:
+1. **Marcadores de fixture** — toda fila sembrada lleva `synthetic = true` y
+   `source = 'seed'` donde esas columnas existen. El set de referencia es
+   `reference_status = 'synthetic'`, `use = 'research-only'`, y su `norm_note`
+   es el disclaimer visible:
    `"NO es una norma UAGRM. Datos inventados para desarrollo."`
-2. **Names** — the 30 profiles use fictional personas (`evaluado_01` …
-   `evaluado_30`, "Perfil Sintetico NN"); no real student, therapist, or
-   institution names appear in `app/seed/fixtures/`.
-3. **Secrets** — `.env.example` holds dev-only defaults (weak dev passwords,
-   `psico_dev_password_*`, JWT secret placeholder). Real credentials belong
-   only in your local gitignored `.env`; never commit `.env`.
-4. **Audit deny-list** — `audit_log.metadata` never stores responses, tokens,
-   passwords, or instrument content (enforced by convention and asserted in
-   `tests/test_audit.py`).
-5. **Automated proof** — the suite asserts all of the above:
-   `scripts/test` (or `scripts\test.ps1`), then `pytest -k seed|scripts`.
-   `test_reference_fixture_research_only` and the deny-list tests fail if a
-   real-looking value or secret ever sneaks into the fixtures.
+2. **Nombres** — los 30 perfiles usan personas ficticias (`evaluado_01` …
+   `evaluado_30`, "Perfil Sintetico NN"); no aparecen nombres reales de
+   estudiantes, terapeutas ni instituciones en `app/seed/fixtures/`.
+3. **Secretos** — `.env.example` tiene defaults dev-only (contraseñas dev
+   débiles, `psico_dev_password_*`, placeholder de JWT). Las credenciales reales
+   van solo en tu `.env` local gitignored; nunca commitees `.env`.
+4. **Deny-list de auditoría** — `audit_log.metadata` nunca guarda respuestas,
+   tokens, contraseñas ni contenido de instrumentos (aplicado por convención y
+   aseverado en `tests/test_audit.py`).
+5. **Prueba automatizada** — la suite asevera todo lo anterior:
+   `scripts/test` (o `scripts\test.ps1`), luego `pytest -k seed|scripts`.
+   `test_reference_fixture_research_only` y los tests de deny-list fallan si un
+   valor con apariencia real o un secreto se cuela en los fixtures.

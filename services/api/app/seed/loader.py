@@ -32,7 +32,13 @@ from app.models.audit import AuditLog  # noqa: F401  (imported for trigger aware
 from app.models.consent import ConsentGrant, ConsentVersion
 from app.models.identity import Role, User, UserRole
 from app.models.institutions import Campus, Faculty, Institution, Program
-from app.models.instruments import Instrument, InstrumentItem, InstrumentVersion
+from app.models.instruments import (
+    Instrument,
+    InstrumentItem,
+    InstrumentVersion,
+    ResponseOption,
+    Scale,
+)
 from app.models.scoring import ReferenceSet, ReferenceValue
 from app.models.seed import SeedManifest
 from app.models.sessions import Response, Session
@@ -40,6 +46,13 @@ from app.models.sessions import Response, Session
 logger = logging.getLogger("psico.seed")
 
 SEED_VERSION = "1.0.0"
+SEED_OPTION_LABELS = (
+    "Nunca",
+    "Casi nunca",
+    "A veces",
+    "Casi siempre",
+    "Siempre",
+)
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
 # Tables that carry synthetic/source columns and may hold seed-owned rows,
@@ -54,7 +67,9 @@ SEED_TABLES = [
     "programs",
     "instruments",
     "instrument_versions",
+    "scales",
     "instrument_items",
+    "response_options",
     "consent_versions",
     "consent_grants",
     "sessions",
@@ -65,6 +80,16 @@ SEED_TABLES = [
 
 # Reverse FK order for --reset (children before parents).
 SEED_TABLES_REVERSE = list(reversed(SEED_TABLES))
+
+
+class SeedResetConflictError(RuntimeError):
+    """Raised before reset deletes anything when runtime owns seed children."""
+
+    code = "seed_reset_dependency_conflict"
+
+    def __init__(self, details: list[str]) -> None:
+        self.details = details
+        super().__init__(self.code)
 
 
 def seed_id(key: str) -> uuid.UUID:
@@ -192,19 +217,48 @@ def _seed_rows(db: Session) -> None:
     _upsert(db, InstrumentVersion, {
         "id": version_id, "instrument_id": instrument_id,
         "version_no": items["version_no"], "status": items["status"],
+        "response_type": "likert_1_5",
         "published_at": datetime(2026, 1, 1, tzinfo=timezone.utc),
         "is_immutable": True, "synthetic": True, "source": "seed",
     })
-    flat_items: list[tuple[str, int, str]] = []
-    for scale in items["scales"]:
-        for item in scale["items"]:
-            flat_items.append((scale["scale"], item["order"], item["text"]))
-    for index, (scale, order, text) in enumerate(flat_items, start=1):
-        _upsert(db, InstrumentItem, {
-            "id": seed_id(f"TP-S-01:i{index}"),
-            "version_id": version_id, "scale": scale, "scale_order": order,
-            "text": text, "synthetic": True, "source": "seed",
+    flat_items: list[tuple[str, int, str, uuid.UUID]] = []
+    for display_order, scale in enumerate(items["scales"], start=1):
+        scale_id = seed_id(f"TP-S-01:scale:{scale['scale']}")
+        _upsert(db, Scale, {
+            "id": scale_id,
+            "version_id": version_id,
+            "label": scale["scale"],
+            "locale": "es",
+            "display_order": display_order,
+            "synthetic": True,
+            "source": "seed",
         })
+        for item in scale["items"]:
+            flat_items.append((scale["scale"], item["order"], item["text"], scale_id))
+    for index, (scale, order, item_text, scale_id) in enumerate(flat_items, start=1):
+        item_id = seed_id(f"TP-S-01:i{index}")
+        _upsert(db, InstrumentItem, {
+            "id": item_id,
+            "version_id": version_id,
+            "scale_id": scale_id,
+            "item_order": order,
+            "locale": "es",
+            "required": True,
+            "text": item_text,
+            "synthetic": True,
+            "source": "seed",
+        })
+        for value, label in enumerate(SEED_OPTION_LABELS, start=1):
+            _upsert(db, ResponseOption, {
+                "id": seed_id(f"TP-S-01:i{index}:option:{value}"),
+                "item_id": item_id,
+                "label": label,
+                "locale": "es",
+                "display_order": value,
+                "value": value,
+                "synthetic": True,
+                "source": "seed",
+            })
 
     # --- reference set RS-TP-S-01 (synthetic / research-only) ------------------
     reference = _load_json("reference.json")
@@ -299,6 +353,64 @@ def _write_manifest(db: Session, counts: dict) -> dict:
     }
 
 
+def _seed_reset_preflight(db: Session) -> None:
+    """Reject runtime dependencies on seed catalog rows before any delete."""
+    dependency_queries = {
+        "instrument_versions": """
+            SELECT id FROM instrument_versions
+            WHERE source <> 'seed'
+              AND instrument_id IN (SELECT id FROM instruments WHERE source = 'seed')
+        """,
+        "scales": """
+            SELECT id FROM scales
+            WHERE source <> 'seed'
+              AND version_id IN (SELECT id FROM instrument_versions WHERE source = 'seed')
+        """,
+        "instrument_items": """
+            SELECT id FROM instrument_items
+            WHERE source <> 'seed'
+              AND (version_id IN (SELECT id FROM instrument_versions WHERE source = 'seed')
+                   OR scale_id IN (SELECT id FROM scales WHERE source = 'seed'))
+        """,
+        "response_options": """
+            SELECT id FROM response_options
+            WHERE source <> 'seed'
+              AND item_id IN (SELECT id FROM instrument_items WHERE source = 'seed')
+        """,
+        "sessions": """
+            SELECT id FROM sessions
+            WHERE source <> 'seed'
+              AND instrument_version_id IN (
+                  SELECT id FROM instrument_versions WHERE source = 'seed'
+              )
+        """,
+        "responses": """
+            SELECT id FROM responses
+            WHERE source <> 'seed'
+              AND item_id IN (SELECT id FROM instrument_items WHERE source = 'seed')
+        """,
+        "reference_sets": """
+            SELECT id FROM reference_sets
+            WHERE source <> 'seed'
+              AND instrument_version_id IN (
+                  SELECT id FROM instrument_versions WHERE source = 'seed'
+              )
+        """,
+        "reference_values": """
+            SELECT id FROM reference_values
+            WHERE source <> 'seed'
+              AND reference_set_id IN (SELECT id FROM reference_sets WHERE source = 'seed')
+        """,
+    }
+    conflicts: list[str] = []
+    for table, query in dependency_queries.items():
+        ids = db.execute(text(query)).scalars().all()
+        if ids:
+            conflicts.append(f"{table}:{','.join(str(value) for value in ids)}")
+    if conflicts:
+        raise SeedResetConflictError(conflicts)
+
+
 def _reset_seed_rows(db: Session) -> None:
     """Delete seed-owned rows only (source='seed'), children before parents."""
     for table in SEED_TABLES_REVERSE:
@@ -331,8 +443,11 @@ def run_seed(db: Session) -> dict:
 
 
 def reset_seed(db: Session) -> dict:
-    """--reset: delete seed-owned rows (reverse FK order), then re-seed."""
+    """--reset: preflight, delete seed rows, then re-seed atomically."""
     try:
+        db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended('testpsico.seed.reset', 0))"))
+        db.execute(text("SET LOCAL app.seed_reset = 'on'"))
+        _seed_reset_preflight(db)
         _reset_seed_rows(db)
         _seed_rows(db)
         counts = collect_counts(db)

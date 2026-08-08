@@ -1,0 +1,15 @@
+.root {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+	max-width: var(--measure-readable, 75ch);
+	margin: 0 auto;
+	padding: var(--space-6) var(--space-4);
+}
+
+.digest {
+	color: var(--color-ink-2);
+	font-size: 0.75rem;
+	margin: 0;
+}
+.backLink { color: var(--color-accent); font-weight: 600; text-decoration: underline; text-underline-offset: 0.2em; }

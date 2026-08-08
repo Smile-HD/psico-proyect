@@ -1,0 +1,35 @@
+.root {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--space-3);
+	max-width: var(--measure-readable, 75ch);
+	margin: 0 auto;
+	padding: var(--space-8) var(--space-4);
+}
+
+.code {
+	color: var(--color-accent);
+	font-size: var(--font-size-2xl, 1.5rem);
+	font-weight: 700;
+	margin: 0;
+}
+
+.root h1 {
+	margin: 0;
+}
+
+.root p:not(.code) {
+	color: var(--color-ink-2);
+	margin: 0;
+}
+
+.link {
+	color: var(--color-accent);
+	font-weight: 600;
+	text-decoration: underline;
+	text-underline-offset: 0.2em;
+	min-height: 44px;
+	display: inline-flex;
+	align-items: center;
+}

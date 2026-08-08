@@ -3,8 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+import Button from "@/components/ui/Button";
+import { ErrorState } from "@/components/ui/Feedback";
+import EmptyState from "@/components/ui/EmptyState";
+import Pagination from "@/components/ui/Pagination";
+import Skeleton from "@/components/ui/Skeleton";
+import StatusLabel, { type StatusKind } from "@/components/ui/StatusLabel";
+import Table, { type TableColumn } from "@/components/ui/Table";
 import { apiFetch, ApiError } from "@/lib/api";
-import { clearSession, useSessionUser } from "@/lib/auth";
+import { useSessionUser } from "@/lib/auth";
+
+import styles from "./page.module.css";
 
 type InstrumentRow = {
 	instrument_id: string;
@@ -26,30 +36,38 @@ type ListResponse = {
 	total: number;
 };
 
-const FILTERS: Record<string, string> = {
-	all: "Todos",
-	draft: "Borradores",
-	published: "Publicados",
-	archived: "Archivados",
+const FILTERS = [
+	{ value: "all", label: "Todos" },
+	{ value: "draft", label: "Borradores" },
+	{ value: "published", label: "Publicados" },
+	{ value: "archived", label: "Archivados" },
+] as const;
+
+const STATUS_LABEL: Record<string, { kind: StatusKind; label: string }> = {
+	draft: { kind: "draft", label: "Borrador" },
+	published: { kind: "published", label: "Publicada" },
+	archived: { kind: "archived", label: "Archivada" },
 };
 
-const STATUS_LABEL: Record<string, string> = {
-	draft: "Borrador",
-	published: "Publicada",
-	archived: "Archivada",
-};
+function displayStatus(row: InstrumentRow) {
+	if (row.source === "seed") {
+		return { kind: "reference" as const, label: "Referencia · sintético" };
+	}
+	return STATUS_LABEL[row.status] ?? { kind: "neutral" as const, label: row.status };
+}
 
 export default function CatalogListPage() {
 	const router = useRouter();
 	const [rows, setRows] = useState<InstrumentRow[] | null>(null);
 	const [total, setTotal] = useState(0);
 	const [page, setPage] = useState(1);
-	const [filter, setFilter] = useState("all");
+	const [filter, setFilter] = useState<(typeof FILTERS)[number]["value"]>("all");
 	const [error, setError] = useState<string | null>(null);
-	const [busy, setBusy] = useState(false);
+	const [reloadKey, setReloadKey] = useState(0);
 	const { user, ready } = useSessionUser();
-	const canManage =
-		user?.roles.includes("admin") || user?.roles.includes("psicologo");
+	const canManage = Boolean(
+		user?.roles.includes("admin") || user?.roles.includes("psicologo"),
+	);
 
 	useEffect(() => {
 		if (!ready) return;
@@ -57,178 +75,175 @@ export default function CatalogListPage() {
 			router.replace("/login");
 			return;
 		}
-		if (!canManage) {
-			setError("No tiene permisos para administrar el catálogo.");
-			return;
-		}
+		if (!canManage) return;
+
 		let cancelled = false;
-		setBusy(true);
+		setRows(null);
+		setError(null);
 		const status = filter === "all" ? undefined : filter;
 		const params = new URLSearchParams({ page: String(page), page_size: "20" });
 		if (status) params.set("status", status);
+
 		apiFetch<ListResponse>(
 			`/api/v1/catalog/admin/instruments?${params.toString()}`,
-			{
-				token: localStorage.getItem("psico_token") ?? "",
-			},
+			{ token: localStorage.getItem("psico_token") ?? "" },
 		)
 			.then((data) => {
 				if (cancelled) return;
 				setRows(data.items);
 				setTotal(data.total);
-				setError(null);
 			})
 			.catch((err) => {
 				if (cancelled) return;
-				setRows([]);
 				setError(
 					err instanceof ApiError
-						? err.payload.message
-						: "No se pudo cargar el catálogo.",
+						? "No se pudo cargar el catálogo. Revise el servicio y vuelva a intentar."
+						: "No se pudo cargar el catálogo. Intente nuevamente.",
 				);
 			})
-			.finally(() => {
-				if (!cancelled) setBusy(false);
-			});
+			.catch(() => undefined);
+
 		return () => {
 			cancelled = true;
 		};
-	}, [page, filter, ready, user, canManage, router]);
+	}, [canManage, filter, page, ready, reloadKey, router, user]);
 
-	function onLogout() {
-		clearSession();
-		router.replace("/login");
+	const columns: readonly TableColumn<InstrumentRow>[] = [
+		{
+			id: "key",
+			header: "Clave",
+			rowHeader: true,
+			render: (row) => <span>{row.key}</span>,
+		},
+		{
+			id: "title",
+			header: "Título",
+			render: (row) => row.title,
+		},
+		{
+			id: "status",
+			header: "Estado",
+			render: (row) => {
+			const status = displayStatus(row);
+			return <StatusLabel kind={status.kind}>{status.label}</StatusLabel>;
+		},
+		},
+		{
+			id: "version",
+			header: "Versión",
+			numeric: true,
+			render: (row) => `v${row.version_no}`,
+		},
+		{
+			id: "actions",
+			header: "Acciones",
+			render: (row) => (
+				<Link
+					className={styles.tableLink}
+					href={`/catalogo/${row.instrument_id}/versiones/${row.instrument_version_id}`}
+				>
+					{row.source === "seed" || row.status !== "draft" ? "Ver" : "Editar"}
+				</Link>
+			),
+		},
+	];
+
+	if (ready && user && !canManage) {
+		return (
+			<div className={styles.page}>
+				<EmptyState
+					contextLabel="Catálogo de instrumentos"
+					title="Sección no disponible"
+					description="Su cuenta puede participar en evaluaciones, pero no tiene permisos para administrar instrumentos."
+				/>
+			</div>
+		);
 	}
 
 	return (
-		<main
-			style={{
-				fontFamily: "system-ui, sans-serif",
-				maxWidth: 900,
-				margin: "2rem auto",
-				padding: "0 1rem",
-			}}
-		>
-			<header
-				style={{
-					display: "flex",
-					justifyContent: "space-between",
-					alignItems: "center",
-				}}
-			>
-				<h1>Catálogo de instrumentos</h1>
-				<div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-					{user ? <span style={{ color: "#666" }}>{user.username}</span> : null}
-					<button onClick={onLogout} style={{ cursor: "pointer" }}>
-						Salir
-					</button>
+		<div className={styles.page}>
+			<header className={styles.header}>
+				<div>
+					<p className={styles.eyebrow}>Administración</p>
+					<h1>Catálogo de instrumentos</h1>
+					<p className={styles.intro}>
+						Consulte las versiones disponibles y mantenga el contenido editable.
+					</p>
 				</div>
-			</header>
-
-			<nav style={{ display: "flex", gap: "1rem", margin: "1rem 0" }}>
-				{Object.entries(FILTERS).map(([value, label]) => (
-					<button
-						key={value}
-						onClick={() => {
-							setFilter(value);
-							setPage(1);
-						}}
-						style={{
-							cursor: "pointer",
-							fontWeight: filter === value ? "bold" : "normal",
-							padding: "0.4rem 0.8rem",
-						}}
-					>
-						{label}
-					</button>
-				))}
 				{canManage ? (
-					<Link
-						href="/catalogo/nuevo"
-						style={{ marginLeft: "auto", fontWeight: "bold" }}
-					>
-						+ Nuevo instrumento
+					<Link className={styles.linkButton} href="/catalogo/nuevo">
+						Nuevo instrumento
 					</Link>
 				) : null}
+			</header>
+
+			<nav className={styles.filters} aria-label="Filtrar instrumentos">
+				{FILTERS.map((option) => (
+					<Button
+						key={option.value}
+						size="compact"
+						variant={filter === option.value ? "primary" : "secondary"}
+						type="button"
+						aria-pressed={filter === option.value}
+						onClick={() => {
+							setFilter(option.value);
+							setPage(1);
+						}}
+					>
+						{option.label}
+					</Button>
+				))}
 			</nav>
 
-			{error ? <p style={{ color: "#b3261e" }}>{error}</p> : null}
-			{busy && !rows ? <p>Cargando…</p> : null}
-
-			{rows ? (
-				<>
-					<p style={{ color: "#666" }}>
-						{total} instrumento{total === 1 ? "" : "s"} · página {page}
-					</p>
-					<table style={{ width: "100%", borderCollapse: "collapse" }}>
-						<thead>
-							<tr style={{ textAlign: "left", borderBottom: "1px solid #ccc" }}>
-								<th style={{ padding: "0.5rem" }}>Clave</th>
-								<th style={{ padding: "0.5rem" }}>Título</th>
-								<th style={{ padding: "0.5rem" }}>Estado</th>
-								<th style={{ padding: "0.5rem" }}>Versión</th>
-								<th style={{ padding: "0.5rem" }}>Acciones</th>
-							</tr>
-						</thead>
-						<tbody>
-							{rows.map((row) => (
-								<tr
-									key={row.instrument_version_id}
-									style={{ borderBottom: "1px solid #eee" }}
-								>
-									<td style={{ padding: "0.5rem" }}>
-										{row.key}
-										{row.source === "seed" ? (
-											<span
-												title="Instrumento de referencia (sintético)"
-												style={{
-													marginLeft: "0.4rem",
-													color: "#8a5a00",
-													fontSize: "0.8rem",
-												}}
-											>
-												referencia
-											</span>
-										) : null}
-									</td>
-									<td style={{ padding: "0.5rem" }}>{row.title}</td>
-									<td style={{ padding: "0.5rem" }}>
-										{STATUS_LABEL[row.status] ?? row.status}
-									</td>
-									<td style={{ padding: "0.5rem" }}>v{row.version_no}</td>
-									<td style={{ padding: "0.5rem" }}>
-										<Link
-											href={`/catalogo/${row.instrument_id}/versiones/${row.instrument_version_id}`}
-										>
-											{row.source === "seed"
-												? "Ver"
-												: row.status === "draft"
-													? "Editar"
-													: "Ver"}
-										</Link>
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-					<div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-						<button
-							disabled={page <= 1}
-							onClick={() => setPage(page - 1)}
-							style={{ cursor: "pointer" }}
-						>
-							Anterior
-						</button>
-						<button
-							disabled={page * 20 >= total}
-							onClick={() => setPage(page + 1)}
-							style={{ cursor: "pointer" }}
-						>
-							Siguiente
-						</button>
+			{!ready || !user ? (
+				<Skeleton variant="table" rows={5} columns={5} label="Cargando el catálogo…" />
+			) : error ? (
+				<ErrorState
+					title="No se pudo cargar el catálogo"
+					message={error}
+					onRetry={() => setReloadKey((current) => current + 1)}
+				/>
+			) : rows === null ? (
+				<Skeleton variant="table" rows={5} columns={5} label="Cargando el catálogo…" />
+			) : rows.length === 0 ? (
+				<EmptyState
+					contextLabel={`${total} resultados`}
+					title="No hay instrumentos todavía"
+					description={
+						filter === "all"
+							? "El catálogo está vacío. Puede crear el primer instrumento para comenzar."
+							: "No hay instrumentos con este filtro. Pruebe otra vista o cree un instrumento nuevo."
+					}
+					action={
+						canManage ? (
+							<Link className={styles.linkButton} href="/catalogo/nuevo">
+								Crear instrumento
+							</Link>
+						) : undefined
+					}
+				/>
+			) : (
+				<section className={styles.results} aria-labelledby="results-heading">
+					<div className={styles.resultsHeading}>
+						<h2 id="results-heading">Instrumentos</h2>
+						<p className={styles.resultCount}>
+							{total} instrumento{total === 1 ? "" : "s"} · página {page}
+						</p>
 					</div>
-				</>
-			) : null}
-		</main>
+					<Table
+						caption="Instrumentos del catálogo"
+						columns={columns}
+						rows={rows}
+						rowKey={(row) => row.instrument_version_id}
+					/>
+					<Pagination
+						page={page}
+						pageSize={20}
+						total={total}
+						onPageChange={setPage}
+					/>
+				</section>
+			)}
+		</div>
 	);
 }

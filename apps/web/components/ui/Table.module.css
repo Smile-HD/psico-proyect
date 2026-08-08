@@ -20,28 +20,28 @@
 	text-align: left;
 }
 
-thead {
+.table thead {
 	background: var(--color-canvas);
 }
 
-th,
-td {
+.table th,
+.table td {
 	padding: var(--space-3) var(--space-4);
 	border-bottom: 1px solid var(--color-border);
 	vertical-align: middle;
 	text-align: left;
 }
 
-th {
+.table th {
 	font-weight: 600;
 }
 
-tbody th {
+.table tbody th {
 	color: var(--color-ink-1);
 }
 
-tbody tr:last-child th,
-tbody tr:last-child td {
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
 	border-bottom: 0;
 }
 

@@ -1,0 +1,61 @@
+.root {
+	display: flex;
+	gap: var(--space-3);
+	padding: var(--space-4);
+	border: 1px solid currentColor;
+	border-radius: var(--radius-md);
+	background: var(--color-surface);
+}
+
+.errorState {
+	color: var(--color-error);
+}
+
+.notice[data-tone="success"] {
+	color: var(--color-success);
+}
+
+.notice[data-tone="info"] {
+	color: var(--color-accent);
+}
+
+.notice[data-tone="warning"] {
+	color: var(--color-warning);
+}
+
+.notice[data-tone="error"] {
+	color: var(--color-error);
+}
+
+.marker {
+	display: inline-flex;
+	width: 1.5rem;
+	height: 1.5rem;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid currentColor;
+	border-radius: var(--radius-sm);
+	font-weight: 700;
+}
+
+.content {
+	display: grid;
+	flex: 1;
+	gap: var(--space-2);
+}
+
+.content h2 {
+	font-size: var(--font-size-heading-3);
+}
+
+.content p {
+	color: var(--color-ink-1);
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+	margin-top: var(--space-2);
+}

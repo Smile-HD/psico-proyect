@@ -1,89 +1,98 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { ApiError, clearSession, getSessionUser, login } from "@/lib/auth";
+import { useRef, useState } from "react";
+
+import { Notice } from "@/components/ui/Feedback";
+import Button from "@/components/ui/Button";
+import Field, { type FieldControlHandle } from "@/components/ui/Field";
+import { ApiError, login } from "@/lib/auth";
+
+import styles from "./page.module.css";
 
 export default function LoginPage() {
 	const router = useRouter();
+	const passwordRef = useRef<FieldControlHandle>(null);
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 
-	async function onSubmit(event: React.FormEvent) {
+	async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		if (busy) return;
 		setBusy(true);
 		setError(null);
 		try {
-			const user = await login(username, password);
-			const roles = user.roles.join(", ");
+			await login(username, password);
 			setUsername("");
 			setPassword("");
 			router.push("/catalogo");
-			setTimeout(
-				() => alert(`Sesión iniciada como ${user.username} (${roles})`),
-				0,
-			);
 		} catch (err) {
-			if (err instanceof ApiError) {
-				setError(err.payload.message);
-			} else {
-				setError("No se pudo conectar con el servicio de la API.");
-			}
+			const isCredentialError =
+				err instanceof ApiError &&
+				["unauthorized", "invalid_credentials"].includes(err.payload.code);
+			setError(
+				isCredentialError
+					? "El usuario o la contraseña no son correctos."
+					: "No se pudo conectar con el servicio de la API. Intente nuevamente.",
+			);
+			passwordRef.current?.focus();
 		} finally {
 			setBusy(false);
 		}
 	}
 
 	return (
-		<main
-			style={{
-				fontFamily: "system-ui, sans-serif",
-				maxWidth: 420,
-				margin: "4rem auto",
-				padding: "0 1rem",
-			}}
-		>
-			<h1>TestPsico — Iniciar sesión</h1>
-			<form
-				onSubmit={onSubmit}
-				style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-			>
-				<label>
-					Usuario
-					<input
-						type="text"
+		<div className={styles.page}>
+			<section className={styles.panel} aria-labelledby="login-heading">
+				<header className={styles.header}>
+					<p className={styles.eyebrow}>Acceso al catálogo</p>
+					<h1 id="login-heading">Iniciar sesión</h1>
+					<p>
+						Ingrese sus credenciales para administrar instrumentos y versiones.
+					</p>
+				</header>
+
+				<form className={styles.form} onSubmit={onSubmit}>
+					{error ? (
+						<Notice tone="error" role="alert" message={error} />
+					) : null}
+					<Field
+						id="login-username"
+						name="username"
+						label="Usuario"
 						value={username}
 						onChange={(event) => setUsername(event.target.value)}
+						autoComplete="username"
 						required
-						style={{ display: "block", width: "100%", padding: "0.5rem" }}
 					/>
-				</label>
-				<label>
-					Contraseña
-					<input
+					<Field
+						ref={passwordRef}
+						id="login-password"
+						name="password"
+						label="Contraseña"
 						type="password"
 						value={password}
 						onChange={(event) => setPassword(event.target.value)}
+						autoComplete="current-password"
 						required
-						style={{ display: "block", width: "100%", padding: "0.5rem" }}
 					/>
-				</label>
-				{error ? <p style={{ color: "#b3261e" }}>{error}</p> : null}
-				<button
-					type="submit"
-					disabled={busy}
-					style={{ padding: "0.6rem", cursor: "pointer" }}
-				>
-					{busy ? "Iniciando…" : "Iniciar sesión"}
-				</button>
-			</form>
-			<footer style={{ marginTop: "2rem", color: "#666", fontSize: "0.9rem" }}>
-				Entorno de desarrollo con datos sintéticos (research-only). Usuarios de
-				prueba: admin, psicologo y evaluado.
-			</footer>
-		</main>
+					<Button
+						type="submit"
+						busy={busy}
+						pendingLabel="Iniciando…"
+					>
+						Iniciar sesión
+					</Button>
+				</form>
+
+				<div className={styles.footer}>
+					<Link href="/">Volver al inicio</Link>
+					<p>Datos sintéticos para investigación. No se realizan afirmaciones clínicas.</p>
+				</div>
+			</section>
+		</div>
 	);
 }

@@ -1,96 +1,128 @@
 import { unstable_noStore as noStore } from "next/cache";
 
-/**
- * TestPsico — vertical slice (F1).
- *
- * Calls the API by its compose service name (`api`) over the internal network,
- * proving the compose wiring for later phases. UI texts are Spanish. If the
- * API is unreachable, a friendly Spanish error is shown — never a stack trace.
- */
+import { Notice } from "@/components/ui/Feedback";
+import StatusLabel from "@/components/ui/StatusLabel";
+
+import styles from "./page.module.css";
 
 type SeedStatus = {
-  seed: {
-    items: number;
-    reference_sets: number;
-    profiles: number;
-    sessions: number;
-    responses: number;
-    consent_grants: number;
-  };
-  manifest: { seed_version: string; checksum: string; executed_at: string | null } | null;
+	seed: {
+		items: number;
+		reference_sets: number;
+		profiles: number;
+		sessions: number;
+		responses: number;
+		consent_grants: number;
+	};
+	manifest: {
+		seed_version: string;
+		checksum: string;
+		executed_at: string | null;
+	} | null;
 };
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
-  }
-  return (await res.json()) as T;
+	const res = await fetch(url, { cache: "no-store" });
+	if (!res.ok) {
+		throw new Error(`HTTP ${res.status}`);
+	}
+	return (await res.json()) as T;
 }
 
 export default async function Home() {
-  noStore();
+	noStore();
 
-  const apiBase = process.env.API_BASE_URL ?? "http://api:8000";
+	const apiBase = process.env.API_BASE_URL ?? "http://api:8000";
+	const [health, seed] = await Promise.all([
+		fetchJson<{ status?: string }>(`${apiBase}/health`),
+		fetchJson<SeedStatus>(`${apiBase}/api/v1/seed/status`),
+	]);
+	const healthOk = health.status === "ok";
 
-  let health: { status?: string } | null = null;
-  let seed: SeedStatus | null = null;
-  let error: string | null = null;
+	return (
+		<div className={styles.page}>
+			<header className={styles.hero}>
+				<p className={styles.eyebrow}>TestPsico · entorno de investigación</p>
+				<h1>Estado del servicio</h1>
+				<p className={styles.lead}>
+					Información operativa del entorno sintético para comprobar la disponibilidad
+					y el contenido de referencia.
+				</p>
+			</header>
 
-  try {
-    const [healthResult, seedResult] = await Promise.all([
-      fetchJson<{ status?: string }>(`${apiBase}/health`),
-      fetchJson<SeedStatus>(`${apiBase}/api/v1/seed/status`),
-    ]);
-    health = healthResult;
-    seed = seedResult;
-  } catch {
-    error = "No se pudo conectar con el servicio de la API. Intente nuevamente más tarde.";
-  }
+			<section className={styles.statusSection} aria-labelledby="health-heading">
+				<div className={styles.sectionHeading}>
+					<div>
+						<p className={styles.kicker}>Disponibilidad</p>
+						<h2 id="health-heading">Salud de la API</h2>
+					</div>
+					<StatusLabel
+						kind={healthOk ? "success" : "warning"}
+						symbol={healthOk ? "✓" : "!"}
+					>
+						{healthOk ? "Disponible" : "No disponible"}
+					</StatusLabel>
+				</div>
+				{healthOk ? (
+					<p className={styles.supportingText}>
+						El servicio respondió correctamente al último control.
+					</p>
+				) : (
+					<Notice
+						tone="warning"
+						role="alert"
+						message="La API respondió con un estado no disponible. Revise el servicio y vuelva a intentar."
+					/>
+				)}
+			</section>
 
-  return (
-    <main style={{ fontFamily: "system-ui, sans-serif", maxWidth: 640, margin: "3rem auto", padding: "0 1rem" }}>
-      <h1>TestPsico — Estado del servicio</h1>
-
-      <section>
-        <h2>Salud de la API</h2>
-        {error ? (
-          <p style={{ color: "#b3261e" }}>{error}</p>
-        ) : health?.status === "ok" ? (
-          <p style={{ color: "#1e8e3e" }}>OK</p>
-        ) : (
-          <p style={{ color: "#b3261e" }}>No disponible</p>
-        )}
-      </section>
-
-      <section>
-        <h2>Semilla (datos sintéticos)</h2>
-        {error || !seed ? (
-          <p>No hay información de la semilla disponible.</p>
-        ) : (
-          <>
-            <ul>
-              <li>Ítems: {seed.seed.items}</li>
-              <li>Conjuntos de referencia: {seed.seed.reference_sets}</li>
-              <li>Perfiles: {seed.seed.profiles}</li>
-              <li>Sesiones: {seed.seed.sessions}</li>
-              <li>Respuestas: {seed.seed.responses}</li>
-              <li>Consentimientos: {seed.seed.consent_grants}</li>
-            </ul>
-            {seed.manifest ? (
-              <p>
-                Manifest: versión {seed.manifest.seed_version} · ejecutado el{" "}
-                {new Date(seed.manifest.executed_at ?? "").toLocaleString("es-ES")}
-              </p>
-            ) : null}
-          </>
-        )}
-      </section>
-
-      <footer style={{ marginTop: "3rem", color: "#666" }}>
-        Entorno de desarrollo. Todos los datos son sintéticos y de uso exclusivo
-        para investigación (research-only).
-      </footer>
-    </main>
-  );
+			<section className={styles.seedSection} aria-labelledby="seed-heading">
+				<div className={styles.sectionHeading}>
+					<div>
+						<p className={styles.kicker}>Contenido cargado</p>
+						<h2 id="seed-heading">Semilla de referencia</h2>
+					</div>
+					<StatusLabel kind="reference" symbol="·">
+						Datos sintéticos
+					</StatusLabel>
+				</div>
+				<p className={styles.supportingText}>
+					El contenido se utiliza únicamente para investigación y pruebas del sistema;
+					no representa validación clínica.
+				</p>
+				<dl className={styles.summary}>
+					<div>
+						<dt>Ítems</dt>
+						<dd>{seed.seed.items}</dd>
+					</div>
+					<div>
+						<dt>Conjuntos de referencia</dt>
+						<dd>{seed.seed.reference_sets}</dd>
+					</div>
+					<div>
+						<dt>Perfiles</dt>
+						<dd>{seed.seed.profiles}</dd>
+					</div>
+					<div>
+						<dt>Sesiones</dt>
+						<dd>{seed.seed.sessions}</dd>
+					</div>
+					<div>
+						<dt>Respuestas</dt>
+						<dd>{seed.seed.responses}</dd>
+					</div>
+					<div>
+						<dt>Consentimientos</dt>
+						<dd>{seed.seed.consent_grants}</dd>
+					</div>
+				</dl>
+				{seed.manifest ? (
+					<p className={styles.manifest}>
+						Semilla {seed.manifest.seed_version} · ejecutada el{" "}
+						{new Date(seed.manifest.executed_at ?? "").toLocaleString("es-ES")}
+					</p>
+				) : null}
+			</section>
+		</div>
+	);
 }

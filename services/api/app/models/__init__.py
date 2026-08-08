@@ -9,7 +9,14 @@ from app.db.base import Base
 
 from .identity import Role, User, UserRole
 from .institutions import Campus, Faculty, Institution, Program
-from .instruments import Instrument, InstrumentItem, InstrumentVersion
+from .instruments import (
+    Instrument,
+    InstrumentItem,
+    InstrumentVersion,
+    ResponseOption,
+    Scale,
+)
+from .idempotency import IdempotencyRecord
 from .sessions import Response, Session
 from .scoring import ReferenceSet, ReferenceValue, ScoreRun
 from .recommendation import RecommendationResult, RecommendationRule
@@ -30,6 +37,9 @@ __all__ = [
     "Instrument",
     "InstrumentVersion",
     "InstrumentItem",
+    "Scale",
+    "ResponseOption",
+    "IdempotencyRecord",
     "Session",
     "Response",
     "ReferenceSet",

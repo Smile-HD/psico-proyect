@@ -26,3 +26,4 @@ npm-debug.log*
 # Local tooling indexes
 .codegraph/
 services/api/.venv/
+.gentle-ai-instance

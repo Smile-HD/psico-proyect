@@ -1,126 +1,124 @@
-# Tasks — F2 Catalog UX Redesign (owner: Trevor)
+# Apply progress — F2 Catalog UX Redesign
 
-Implementation plan derived from `proposal.md`, the 4 specs under `specs/` (`web-foundations`, `web-components`, `web-pages`, `web-accessibility`), and `design.md` (file tree, component contracts, layers 1–4). Every task is one-session-sized, references concrete paths, and carries a done-definition. The change is frontend/documentation-only with zero new dependencies and a product-owner ceiling of 3,500 changed lines. Strict TDD is configured for the API (pytest), but the web app has no UI test runner and the design forbids adding a test framework; automated proof is `cd apps/web && npm run build` (Next build + typecheck) and manual proof is the route/keyboard/contrast checklist. Tasks are tagged with the change marker `[UX]`.
+## Slice and boundary
 
-## Review Workload Forecast
+- Change: `f2-catalogo-ux-redesign`
+- Slice: 1 of 4 / PR 1, stacked-to-main
+- Assigned work: implementation-owned T1.1–T1.7 only (foundations and shell)
+- Out of scope: T2/T3/T4, V tasks, parent lifecycle tasks, API/auth contracts, services/api, packages/contracts, and content-page redesign.
+- Delivery exception: the owner-approved budget exception and `stacked-to-main` strategy were consumed as provided by the parent. This slice did not add a styling dependency.
 
-| Field | Value |
-| ------- | ------- |
-| Estimated changed lines | ~4,200–5,800 raw (additions + deletions; includes ~600–900 generated `package-lock.json` lines); product-owner ceiling is 3,500 → implementation MUST trim decoration before accessibility/state coverage, enforced by freeze task T4.4 |
-| 400-line budget risk | High |
-| Chained PRs recommended | Yes |
-| Suggested split | PR 1 (foundations/shell) → PR 2 (primitives) → PR 3 (pages/states) → PR 4 (a11y/docs/freeze + verification) |
-| Delivery strategy | auto-forecast (session default); every slice is estimated above 400 changed lines, so the delivery decision is reported here and made at apply time |
-| Chain strategy | **RATIFIED: stacked-to-main** (F2 user decision 2026-08-08) — 4 sequential PRs against main, one slice applied at a time; no change in this frontend-only diff justifies switching to feature-branch-chain |
+## Structured status consumed
 
-```text
-Decision needed before apply: Yes
-Chained PRs recommended: Yes
-Chain strategy: stacked-to-main
-400-line budget risk: High
-```
+- Artifact store: `openspec`
+- Active change: `f2-catalogo-ux-redesign`
+- Planning status: `nextRecommended: apply`, `blockedReasons: []`
+- Edit authority: granted by the owner for `D:\Personal\Proyectos\TestPsico\psico-proyect`; all authored edits stayed under that root.
+- Runtime attempt: parent-provided `state: proceed`; no second attempt was acquired.
+- Windows cwd warning: native commands were run with the filesystem-case path `D:\Personal\Proyectos\TestPsico\psico-proyect`.
+- `actionContext`: no unsafe edit-root warning was supplied; the delegated prompt supplied the authoritative root and slice boundary. The native status did not provide a separate `applyState`, so readiness was taken only from the parent-resolved planning status.
 
-Per-PR estimate: PR 1 ≈ 1,200–1,700 lines (incl. generated lockfile); PR 2 ≈ 1,300–1,800; PR 3 ≈ 1,400–1,900; PR 4 ≈ 250–400. Each PR is an autonomous work unit with its own start (green `next build`) and finish (review + merge) boundary; see the forecast note at the end of this file.
+## Completed tasks and persisted checkboxes
 
----
+- T1.1 `[x]`: vendored the Latin Source Sans 3 variable WOFF2 subset, added the SIL OFL license note, and configured `next/font/local` with `font-display: swap` and a tokenized non-`system-ui` fallback.
+- T1.2 `[x]`: replaced `globals.css` with the single runtime token source, reset, typography, visible two-part focus, reduced-motion rules, and tabular numeral utility.
+- T1.3 `[x]`: added the root shell module, skip link, `main#main-content`, `#app-shell`, viewport/theme metadata, and institutional research-only footer; root metadata no longer claims service status.
+- T1.4 `[x]`: added the TestPsico favicon and metadata-only layouts for login, catalog, create, version editor, and evaluator view.
+- T1.5 `[x]`: added the single role-aware responsive NavBar implementation, CSS module, logout flow, active-route semantics, and one-line compatibility re-export.
+- T1.6 `[x]`: ran plain `npm install` and `npm ci`; `package.json` dependency declarations stayed unchanged and the already tracked `package-lock.json` remained reproducible.
+- T1.7 `[x]`: final layer gate passed; the shell/NavBar anti-checklist and local-font source checks passed.
 
-## T1 — Layer 1: Foundations and shell (PR 1)
+The persisted `openspec/changes/f2-catalogo-ux-redesign/tasks.md` was updated from `[ ]` to `[x]` for each of T1.1–T1.7 and re-read before return.
 
-- [x] **T1.1** — Vendor the font: add `apps/web/app/fonts/SourceSans3-Variable.woff2` (WOFF2, correct license noted for the repo) and load it with `next/font/local` + `font-display: swap` in `apps/web/app/layout.tsx` (or a dedicated `apps/web/app/fonts.ts` module); keep a tokenized system fallback that preserves layout if the asset is removed. [UX] Done when: `npm run build` succeeds in an offline/Docker context with no network font fetch; the computed font family resolves to Source Sans 3; the fallback stack never starts with `system-ui`. <!-- sdd-owner: implementation -->
+## Files changed by this slice
 
-- [x] **T1.2** — Rewrite `apps/web/app/globals.css` as the only runtime token source per design §3: semantic color tokens (including `--color-on-accent`), typography scale, `--space-*` 4/8px rhythm, bounded `--radius-*`, `--shadow-subtle`, `--motion-*`, declared `--z-*` layers; plus reset, base typography (1.5–1.65 line-height, ~60–75ch measure), `:focus-visible` two-part focus using `--color-focus` (never `outline: none`), `prefers-reduced-motion` block (near-zero durations, no skeleton pulse), and a tabular-nums utility class. [UX] Done when: token names/values match design §3; no `999px` radius, no raw hex outside `:root` token definitions, and `#1e8e3e` is absent. <!-- sdd-owner: implementation -->
+- `apps/web/app/fonts/SourceSans3-Variable.woff2`
+- `apps/web/app/fonts/SourceSans3-LICENSE.txt`
+- `apps/web/app/globals.css`
+- `apps/web/app/layout.tsx`
+- `apps/web/app/layout.module.css`
+- `apps/web/app/login/layout.tsx`
+- `apps/web/app/catalogo/layout.tsx`
+- `apps/web/app/catalogo/nuevo/layout.tsx`
+- `apps/web/app/catalogo/[instrumentId]/versiones/[versionId]/layout.tsx`
+- `apps/web/app/catalogo/[instrumentId]/versiones/[versionId]/vista/layout.tsx`
+- `apps/web/components/ui/NavBar.tsx`
+- `apps/web/components/ui/NavBar.module.css`
+- `apps/web/components/NavBar.tsx`
+- `apps/web/public/favicon.svg`
+- `openspec/changes/f2-catalogo-ux-redesign/tasks.md`
 
-- [x] **T1.3** — Rework the root shell: `apps/web/app/layout.tsx` + `apps/web/app/layout.module.css` — `lang="es"`, explicit viewport and `theme-color` metadata, skip link as the first focusable element targeting `main#main-content`, `#app-shell` wrapper, NavBar, and an institutional footer with legal/research-only copy; base metadata no longer claims "Estado del servicio" for the whole app. [UX] Done when: the skip link is first in tab order and moves focus to main; shell and footer render; metadata values match the token palette. <!-- sdd-owner: implementation -->
+`apps/web/package-lock.json` was verified as already tracked in `HEAD`; `npm install` produced no lockfile delta. `apps/web/package.json`, `apps/web/lib/api.ts`, `apps/web/lib/auth.ts`, API services, contracts, and tests were not modified.
 
-- [x] **T1.4** — Add `apps/web/public/favicon.svg` (simple textual/shape TestPsico mark, accent tokens, no unlicensed artwork) and the route segment metadata layouts: `login/layout.tsx`, `catalogo/layout.tsx`, `catalogo/nuevo/layout.tsx`, `catalogo/[instrumentId]/versiones/[versionId]/layout.tsx`, and `.../vista/layout.tsx` — each with a route-specific Spanish title/description; layouts do not fetch data or alter permissions. [UX] Done when: every affected route announces its own title/description and no page falls back to the generic root title (web-pages spec "Each page announces itself"). <!-- sdd-owner: implementation -->
+## Verification evidence
 
-- [x] **T1.5** — Implement the single NavBar: `apps/web/components/ui/NavBar.tsx` + `NavBar.module.css` — textual `TestPsico` wordmark link to `/`, role-derived links (`/` "Estado del servicio" for all; `/catalogo` only for `admin`/`psicologo`, never for `evaluado`), `aria-current="page"` with a non-color indicator (catalog link stays current on nested routes), consistent `Salir`/`Iniciar sesión` placement via `useSessionUser()` + `clearSession()` + `router.replace("/login")`, mobile toggle Button with Spanish `aria-label`/`aria-expanded`/`aria-controls` and 44px targets; then reduce `apps/web/components/NavBar.tsx` to a one-line re-export of `components/ui/NavBar`. [UX] Done when: there is exactly one NavBar implementation and one CSS module; active route is announced; mobile keeps all links reachable at ≥44px with no unlabeled control (web-components NavBar scenarios). <!-- sdd-owner: implementation -->
+- Baseline before editing existing web files: `cd apps/web && npm run build` — passed.
+- Layer builds after T1.1, T1.2, T1.3, T1.4, and T1.5 — passed each time.
+- Reproducibility: `cd apps/web && npm install` — passed; `npm ci` — passed.
+- Final gate: `cd apps/web && npm run build` — passed with Next.js 14.2.35, strict TypeScript checking, and all 7 routes generated/collected successfully.
+- Final anti-check: the token audit confirmed required tokens, no `system-ui`, `999px`, or `#1e8e3e` outside the token definitions, and no network font URL in the shell/font integration. A broad repository scan also surfaced the intentionally untouched legacy page styles; the final gate was scoped to the assigned shell/NavBar boundary as required for Slice 1.
 
-- [x] **T1.6** — Commit `apps/web/package-lock.json` generated by a plain `npm install` with zero dependency changes. [UX] Done when: the lockfile is committed, `npm ci` reproduces the install, and `apps/web/package.json` dependency set is unchanged. <!-- sdd-owner: implementation -->
+## Commit status
 
-- [x] **T1.7** — Layer-1 gate: `cd apps/web && npm run build`; inspect computed token usage in the shell/NavBar; confirm no network font import at build time. [UX] Done when: build is green, tokens resolve to custom properties, and the anti-checklist items (raw hex, `system-ui`, `999px`) are absent from the shell. <!-- sdd-owner: implementation -->
+The seven requested work-unit commit operations were not materialized. The repository's native lifecycle guard rejected the lifecycle operation because no approved delivery receipt was present. `sdd-apply` is prohibited from creating or approving receipts, launching bounded review, or bypassing the guard with `--no-verify`. No commit is claimed here; the authored changes remain in the worktree (the initial font files/layout were staged by the preparatory add, while subsequent changes are unstaged). Parent lifecycle must perform receipt-authorized delivery/commits.
 
----
+## Strict TDD / build-gated evidence
 
-## T2 — Layer 2: Low-state primitives (PR 2)
+The project config enables strict TDD for the repository, but the web app has no test runner and the design explicitly prohibits adding a UI test framework. Per the parent-provided delivery decision, the web slice used build-gated RED/GREEN-equivalent evidence rather than inventing tests or dependencies.
 
+| Task | Test file / layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- |
+| T1.1 | No web test runner; Next build gate | Baseline build passed | Build-gated structural check | Build passed after font integration | Not applicable: asset/config only | Final build passed |
+| T1.2 | No web test runner; CSS/token audit | Baseline build passed | Token/anti-check assertions defined before final build | Build passed after globals rewrite | Not applicable: declarative token source | Token audit and final build passed |
+| T1.3 | No web test runner; Next build gate | Baseline build passed | Shell contract checked before build | Build passed after shell rewrite | Not applicable: declarative shell | Final build passed |
+| T1.4 | No web test runner; Next build gate | N/A for new route layouts/assets | Metadata/file contract checked before build | Build passed after metadata and favicon additions | Not applicable: static metadata/assets | Final build passed |
+| T1.5 | No web test runner; Next build gate + static ARIA audit | Baseline build passed | Nav ARIA/role behavior contract checked before build | Build passed after NavBar implementation | Static route/role branches audited | Tokenized CSS cleanup retained green build |
+| T1.6 | npm install / npm ci reproducibility gate | Existing tracked lockfile | Dependency set diff checked | npm ci passed | Not applicable: generated lockfile | No dependency changes |
+| T1.7 | Final build + anti-check script | Prior layer builds passed | Gate assertions defined before final run | Final build passed | Shell/NavBar scoped scan passed | None needed |
+
+No UI tests were added because doing so would violate the explicit no-new-framework constraint. No TDD runner failure is being hidden; the applicable web proof is `npm run build` plus scoped static gates.
+
+## Deviations and risks
+
+- Requested commits remain pending the parent-owned receipt-authorized lifecycle. This is an infrastructure/delivery constraint, not an implementation failure; no unsafe bypass was used.
+- The root layout supplies the required `main#main-content` wrapper while existing route pages still contain their own page-level `<main>` elements. Content-page slices should reconcile those landmarks to avoid nested-main semantics.
+- The favicon uses palette-equivalent `rgb()` literals because standalone SVG favicons cannot consume the CSS custom-property runtime token; no raw hex was added to the shell or NavBar.
+- CodeGraph MCP was unavailable in this session; the read-only upstream `codegraph status` and `codegraph explore` commands were used instead. The index reported current before filesystem fallback.
+
+## Workload and PR boundary
+
+- Current boundary: PR 1 / Slice 1 / T1.1–T1.7 only.
+- Strategy: stacked-to-main.
+- Previous dependency: approved planning artifacts and parent-provided attempt/edit authority.
+- Next dependency: parent lifecycle review/delivery and `sdd-verify` before Slice 2.
+- Slice 2 is not started. It is ready to be planned/applied only after the parent lifecycle actions complete; do not re-apply Slice 1.
+
+## Remaining unchecked tasks (exact persisted lines)
 - [ ] **T2.1** — Implement `apps/web/components/ui/Button.tsx` + `Button.module.css` per design §2 contract: `primary`/`secondary`/`ghost`/`danger` variants with distinct hover/pressed/disabled states, `compact`/`default` sizes (default ≥44px, compact ≥36px per WCAG 2.5.8), `busy` → `disabled` + `aria-busy="true"` + stable pending label supplied by the caller, attribute forwarding (`type`, `name`, `value`, `onClick`, `aria-*`, `data-*`), control radius (no pill), focus via `:focus-visible` only. [UX] Done when: a busy save button is disabled with `aria-busy` and a readable pending label, and a `danger` button is visually distinct from `primary` (web-components Button scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T2.2** — Implement `apps/web/components/ui/StatusLabel.tsx` + `StatusLabel.module.css`: `kind` set (`draft`/`published`/`archived`/`reference`/`success`/`warning`/`error`/`neutral`), required visible Spanish text (e.g. "Archivada", "Referencia · sintético"), optional non-color `symbol` slot, bounded compact radius, no `role="status"` (static badge), text ≥4.5:1 on the label surface. [UX] Done when: archived status is identifiable by text alone without color perception (web-components StatusLabel scenario). <!-- sdd-owner: implementation -->
-
 - [ ] **T2.3** — Implement `apps/web/components/ui/Field.tsx` + `Field.module.css` per design §2 contract: `forwardRef<FieldControlHandle>` exposing `focus()`, controls `input`/`textarea`/`select`/`checkbox`, always-visible `<label htmlFor>`, deterministic `${id}-help`/`${id}-error` ids joined into `aria-describedby`, `aria-invalid="true"` on error, Spanish "Obligatorio" text for required fields (asterisk supplementary only), placeholder never the label, checkbox as a 44px hit area, `autoComplete` passthrough (mandatory `username`/`current-password` at login call sites). [UX] Done when: a field error is announced, linked via `aria-describedby`, and the form can focus the first invalid field through the handle (web-components Field scenario). <!-- sdd-owner: implementation -->
-
 - [ ] **T2.4** — Implement `apps/web/components/ui/Feedback.tsx` + `Feedback.module.css` with named exports `ErrorState` (title/message/retryLabel/onRetry/backAction; `role="alert"`, direct Spanish explanation, visible retry/recovery action, never prints raw exceptions or envelopes) and `Notice` (tone success/info/warning/error; `role="status"` + `aria-live="polite"` by default, `role="alert"` when tone is error; message stays in the DOM until replaced/dismissed — no too-short auto-dismiss). [UX] Done when: a load failure renders a Spanish `role="alert"` with a functional retry, and save feedback is announced politely and remains readable (web-components ErrorState/Notice scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T2.5** — Implement `apps/web/components/ui/Skeleton.tsx` + `Skeleton.module.css`: variants `text`/`heading`/`control`/`block`/`table` (table matches the final `Table` column/row geometry), container `role="status"` + `aria-live="polite"` + visually hidden Spanish "Cargando…" label, low-key opacity pulse only, pulse disabled under `prefers-reduced-motion`. [UX] Done when: a catalog loading state reserves the final table layout with no page jump when data replaces the skeleton (web-components Skeleton scenario). <!-- sdd-owner: implementation -->
-
 - [ ] **T2.6** — Implement `apps/web/components/ui/EmptyState.tsx` + `EmptyState.module.css`: semantic `<section>` preserving page context (heading and navigation stay visible), `title`/`description`/`action`/`contextLabel` props, no decorative emoji or invented clinical claims; permission-denied usage explains why and never fakes a disabled action. [UX] Done when: an empty catalog explains the situation and offers create only when permitted (web-components EmptyState scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T2.7** — Implement `apps/web/components/ui/Table.tsx` + `Table.module.css` per design §2 contract: `<div class=scrollRegion>` wrapping `<table>` with `max-width: 100%` + `overflow-x: auto` (document never scrolls horizontally), `<caption>` even when visually hidden, `<th scope="col">` for every column, `<th scope="row">` for the first column marked `rowHeader`, tabular-nums class for `numeric` columns, no `role="grid"`. [UX] Done when: the catalog table has a caption, scoped headers, and row-header association, and on 375px only the table region scrolls (web-components Table + web-foundations overflow scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T2.8** — Implement `apps/web/components/ui/Pagination.tsx` + `Pagination.module.css` per design §2 contract: `<nav aria-label>` (default "Paginación del catálogo"), previous/next Buttons disabled at boundaries, page-number Buttons only when `totalPages > 1`, current page with `aria-current="page"` plus visible text "Página X de Y", page changes clamped and never mutating filters or page size. [UX] Done when: on page 1 the "Anterior" control is disabled and the current page is communicated in text (web-components Pagination scenario). <!-- sdd-owner: implementation -->
-
 - [ ] **T2.9** — Implement `apps/web/components/ui/Breadcrumb.tsx` + `Breadcrumb.module.css` per design §2 contract: `<nav aria-label="Ruta de navegación"><ol>…</ol></nav>`, final item is text with `aria-current="page"` and never a link, links ≥44px where practical; editor supplies `Catálogo → {instrument_key} → Versión {version_no}`. [UX] Done when: the editor shows the full hierarchy with the current position marked (web-components Breadcrumb scenario). <!-- sdd-owner: implementation -->
-
 - [ ] **T2.10** — Implement `apps/web/components/ui/Dialog.tsx` + `Dialog.module.css` per design §5 (React 18, zero dependencies): controlled client component, portal via `createPortal` after a `mounted` guard, `role="dialog"` + `aria-modal="true"` + `useId()`-generated `aria-labelledby`/`aria-describedby`, focus-in on open (initialFocusRef → `[data-dialog-autofocus]` → Cancel → first focusable → panel), `Escape` + explicit Cancel close, `Tab`/`Shift+Tab` trap within the panel, overlay NOT click-dismissible, app shell marked `aria-hidden`/`inert` while open, body scroll lock, and focus returned to the captured trigger on close with prior shell state restored; the Dialog owns no API calls. [UX] Done when: a manual keyboard pass confirms open → focus-in → Tab cycling → Escape/Cancel → focus return, and the underlying page is unreachable while open (web-components Dialog scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T2.11** — Layer-2 gate: `cd apps/web && npm run build` after each component slice, then a focused browser keyboard pass at 375px and desktop over Button, Field, Dialog, Pagination, and Table scroll behavior. [UX] Done when: build is green after the final slice and no UI library or new dependency was added (design §6 Layer 2 gate). <!-- sdd-owner: implementation -->
-
----
-
-## T3 — Layer 3: Pages and route states (PR 3)
-
 - [ ] **T3.1** — Redesign the home: `apps/web/app/page.tsx` + `page.module.css` — keep the server `fetch` + `noStore()` boundary; render health status via `StatusLabel` and the seed summary (20 items, 1 reference set, 30 profiles, plus existing payload counts) with a clear typographic hierarchy, sober Spanish copy (no marketing clichés, no clinical claims), no role redirect; a non-OK health payload is an explicit error/warning state. [UX] Done when: a healthy seeded API shows health OK + seed counts in Spanish within hierarchy, and an unreachable API path surfaces a Spanish retryable state (web-pages Home scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T3.2** — Redesign login: `apps/web/app/login/page.tsx` + `page.module.css` — `Field` username/password with `autoComplete="username"`/`"current-password"`, `Button busy` during submission, invalid credentials render `role="alert"` and focus the password `Field` handle, success routes to `/catalogo` with no `alert()`, and a `Volver al inicio` link is always present; API/auth contracts unchanged. [UX] Done when: credential errors are announced and focused, and successful login navigates without a native alert (web-pages Login scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T3.3** — Redesign the catalog list: `apps/web/app/catalogo/page.tsx` + `page.module.css` — preserve the role guard (redirect for anonymous, explained denied treatment for `evaluado`, no table); filter toggle Buttons (Todos/Borradores/Publicados/Archivados) with `aria-pressed` and page reset to 1; `Table<InstrumentRow>` with `StatusLabel`, version, tabular numerals; skeleton while `rows === null`; `EmptyState` when zero rows (create action only when `canManage`); `ErrorState` with retry; `Pagination`; create Link Button; username not duplicated in the header. [UX] Done when: the active filter exposes `aria-pressed="true"`, an empty list offers first creation, and pagination boundaries are labelled (web-pages Catalog scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T3.4** — Redesign the new-instrument form: `apps/web/app/catalogo/nuevo/page.tsx` + `page.module.css` — preserve permission guard and create behavior; per-field key-pattern validation with persistent helper text and errors linked via `aria-describedby`; first-invalid `Field` receives focus after failed submit; permission-denied case is an explained `EmptyState` with no form; unchanged POST body and idempotency key; Cancel returns to catalog. [UX] Done when: a violating key shows a field-linked error and receives focus, and a denied user sees an explained state without a form (web-pages New Instrument scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T3.5** — Redesign the version editor: `apps/web/app/catalogo/[instrumentId]/versiones/[versionId]/page.tsx` + `page.module.css` — Breadcrumb (catálogo → instrumento → versión), page header with `StatusLabel`, `Skeleton` until the detail resolves, `Field` controls inside semantic fieldsets, read-only/seed states with explanatory text connected via `aria-describedby` (never disabled styling alone); save stays PUT with the existing payload/idempotency, `Button busy` + `Notice role="status"` "Borrador guardado"; publish/archive open the owned `Dialog` (`dialogAction` page-owned) and only the confirmation invokes the existing POST; published versions remain immutable and lifecycle guards unchanged. [UX] Done when: draft save announces and keeps a polite status, a seed version explains read-only with associated text, and publish uses the accessible dialog with no `confirm()` (web-pages Editor scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T3.6** — Implement `apps/web/components/ui/LikertMatrix.tsx` + `LikertMatrix.module.css` and migrate the evaluator preview: `apps/web/app/catalogo/[instrumentId]/versiones/[versionId]/vista/page.tsx` + `page.module.css` — published-only behavior preserved; matrix renders each item as a row and the five exact payload options as column headings (label + order preserved), required rows show visible Spanish "obligatorio" text, per-cell `headers` associations, inner overflow region at 375px, `interactive={false}` for F2 (no fake disabled controls); metadata header keeps key/version/date; API 404/unavailable renders a Spanish not-found/error treatment with back link and no partial matrix; no numeric values, answer keys, or scoring interpretation. [UX] Done when: a published synthetic version renders the full matrix with exact option headings and required markers, and at 375px only the matrix scrolls (web-components + web-pages Evaluator scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T3.7** — Add route surfaces: `apps/web/app/loading.tsx` (branded root fallback), `apps/web/app/error.tsx` (client error boundary using shared `ErrorState` with `reset()` retry), `apps/web/app/not-found.tsx` (branded Spanish 404 with a way back to `/`), plus `loading.tsx`/`error.tsx` under `login/`, `catalogo/`, `catalogo/nuevo/`, `[versionId]/`, and `[versionId]/vista/` — layout-matched `Skeleton` surfaces and `ErrorState` retry; focus moves to the main region on route change where the App Router structure supports it. [UX] Done when: an unknown URL renders the branded Spanish 404, every affected route has a skeleton loading surface, and transient failures offer a working retry (web-pages Route Surfaces + web-accessibility Focus Management scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T3.8** — Layer-3 gate: `cd apps/web && npm run build` after each route; run the proposal's route smoke checklist for anonymous, `admin`, `psicologo`, and `evaluado`; verify `apps/web/lib/api.ts`, `apps/web/lib/auth.ts`, and all API/contract files remain untouched via a git diff scope check. [UX] Done when: build is green, the smoke checklist passes, and the diff touches only `apps/web` (excluding `lib/api.ts`/`lib/auth.ts`) and documentation (design §6 Layer 3 gate). <!-- sdd-owner: implementation -->
-
----
-
-## T4 — Layer 4: Accessibility, documentation, and freeze (PR 4)
-
 - [ ] **T4.1** — Write `apps/web/docs/design-system.md` as the F3–F6 inheritance reference: token names/values (documenting, never redefining — no second token source), typography scale, spacing rhythm, component usage with the ARIA contracts, accessibility rules, the evaluator matrix pattern, and explicit do/don't rules (no raw hex, no `system-ui`, no styling dependency, no matrix reimplementation). [UX] Done when: F3 can consume tokens, typography, spacing, and the item/option pattern without adding a styling dependency or changing the API contract (web-foundations inheritance scenario). <!-- sdd-owner: implementation -->
-
 - [ ] **T4.2** — Freeze token contrast: compute every foreground/background pairing actually used by the affected routes — normal text ≥4.5:1, large text ≥3:1, focus/control boundaries/status icons ≥3:1; success token ≥4.5:1 on the canvas where it appears; adjust only token values if a pair fails, preserving the navy/cold-neutral direction, and verify `#1e8e3e` never returns. [UX] Done when: every used pairing passes and the final values are recorded in `design-system.md` (web-foundations contrast scenarios). <!-- sdd-owner: implementation -->
-
 - [ ] **T4.3** — Manual keyboard/accessibility pass: skip link → main; logical tab order and visible focus on all interactive elements (not obscured by sticky chrome); filters, forms, pagination, editor actions, Dialog focus trap, and table/matrix reading order with a screen reader; landmarks + single `h1` per page; `prefers-reduced-motion: reduce` pass (transitions near-instant, no delayed input); 375px and desktop viewports; target sizes ≥24×24px with ≥44px on primary controls and nav links; status identifiable without color. [UX] Done when: all web-accessibility spec scenarios pass (full route keyboard pass, dialog focus lifecycle, reduced-motion pass, target size, status-without-color). <!-- sdd-owner: implementation -->
-
 - [ ] **T4.4** — Freeze the delivery: enumerate the final diff — changed files limited to `apps/web` and documentation; count additions + deletions and keep the total ≤ 3,500 changed lines (trim decoration before accessibility/state coverage if needed); confirm no `window.alert()`/`window.confirm()` remain; confirm no new dependency and `package.json` unchanged except the lockfile. [UX] Done when: the web-foundations scope-boundary scenario holds, the ceiling report is documented, and the anti-checklist passes for raw hex/`system-ui`/one-off values in route components. <!-- sdd-owner: implementation -->
-
----
-
-## V — Verification (implementation-owned, after Layer 4)
-
 - [ ] **V.1** — Final automated proof: `cd apps/web && npm run build` succeeds with TypeScript strictness intact; repository web/API smoke checks pass; git diff scope check confirms frontend/documentation-only with no API, contract, database, or lifecycle change (proposal AC1 + AC5). [UX] Done when: build is green and the scope boundary holds. <!-- sdd-owner: implementation -->
-
 - [ ] **V.2** — Route-by-route manual checklist (proposal AC4) covering `/`, `/login`, `/catalogo`, `/catalogo/nuevo`, version editor, evaluator view, and shared navigation for anonymous, `admin`, `psicologo`, and `evaluado`: health/seed loading + error/retry; login autocomplete/busy/error announcement/focus recovery; catalog role guard, `aria-pressed` filters, responsive table, skeleton, empty state, error/retry, pagination labels, status labels; nuevo per-field validation and first-invalid focus; editor draft loading, save/busy/status, read-only/seed, breadcrumb, publish/archive dialogs; evaluator matrix and not-found treatment; wordmark, active route, role-preserving links, logout, keyboard operation, mobile layout. [UX] Done when: every checklist row passes and is recorded with no functional regression (proposal AC4). <!-- sdd-owner: implementation -->
-
 - [ ] **V.3** — Contrast AA final verification on the delivered routes (rendered pairs, not only the token table): normal text ≥4.5:1, large text ≥3:1, meaningful non-text indicators ≥3:1 on the shipped pages. [UX] Done when: every sampled rendered pairing passes WCAG 2.2 AA (proposal AC3 + web-accessibility contrast scenarios). <!-- sdd-owner: implementation -->
-
----
-
-## P — Lifecycle gates (parent-owned, after apply)
-
 - [ ] Start or reuse bounded review of each chained PR (foundations → components → pages → a11y/docs) before merge, then deliver each slice to main in order (stacked-to-main). <!-- sdd-owner: parent -->
 - [ ] Run `sdd-verify` against the 4 specs (web-foundations, web-components, web-pages, web-accessibility) and the proposal acceptance criteria, confirm the freeze/ceiling result, then archive the change. <!-- sdd-owner: parent -->
-
----
-
-## Forecast note (work units)
-
-- **PR 1 (T1.1–T1.7):** ~6–8 commits: font vendor → tokens/globals → shell layout → favicon + segment metadata → NavBar + re-export → lockfile → layer gate. Rollback boundary: git revert of the foundation slice; no API/DB impact. Note: `package-lock.json` is a generated artifact (~600–900 lines) counted in the diff; flag it in the PR description so the reviewer can separate generated from authored lines.
-- **PR 2 (T2.1–T2.11):** ~10–12 commits, one per component + gate. Rollback boundary: revert the components slice; pages are not yet migrated, so no consumer breakage.
-- **PR 3 (T3.1–T3.8):** ~8–10 commits, one per route/surface + gate. Rollback boundary: revert the pages slice; foundations/components remain available for the follow-up.
-- **PR 4 (T4.1–T4.4 + V.1–V.3):** ~4–6 commits: docs → contrast freeze → a11y pass → freeze → verification. Rollback boundary: doc-only revert.
-- **Cross-cutting rules:** never touch `apps/web/lib/api.ts`, `apps/web/lib/auth.ts`, `packages/contracts`, or any API/database file; keep the diff within `apps/web` + documentation; enforce the 3,500-line ceiling at T4.4; no new runtime styling dependency (Tailwind v3.4 remains a documented alternative only).

@@ -3,8 +3,18 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+import Breadcrumb from "@/components/ui/Breadcrumb";
+import Button from "@/components/ui/Button";
+import { ErrorState, Notice } from "@/components/ui/Feedback";
+import Dialog from "@/components/ui/Dialog";
+import Field from "@/components/ui/Field";
+import Skeleton from "@/components/ui/Skeleton";
+import StatusLabel, { type StatusKind } from "@/components/ui/StatusLabel";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useSessionUser } from "@/lib/auth";
+
+import styles from "./page.module.css";
 
 type OptionDraft = {
 	id?: string;
@@ -44,7 +54,6 @@ type AdminVersionDetail = {
 	scales: ScaleDraft[];
 };
 
-/** API shape: option rows arrive as `response_options` per item. */
 type ApiOption = {
 	id?: string;
 	display_order: number;
@@ -71,7 +80,8 @@ type ApiScale = {
 
 type ApiDetail = Omit<AdminVersionDetail, "scales"> & { scales: ApiScale[] };
 
-/** Convert the API detail (response_options) to the editor draft shape. */
+type DialogAction = "publish" | "archive";
+
 function toDraft(detail: ApiDetail): AdminVersionDetail {
 	return {
 		...detail,
@@ -127,6 +137,15 @@ function emptyScale(order: number): ScaleDraft {
 	};
 }
 
+function statusFor(status: AdminVersionDetail["status"]) {
+	const labels: Record<AdminVersionDetail["status"], { kind: StatusKind; label: string }> = {
+		draft: { kind: "draft", label: "Borrador" },
+		published: { kind: "published", label: "Publicada" },
+		archived: { kind: "archived", label: "Archivada" },
+	};
+	return labels[status];
+}
+
 export default function VersionEditorPage() {
 	const params = useParams<{ instrumentId: string; versionId: string }>();
 	const router = useRouter();
@@ -134,16 +153,23 @@ export default function VersionEditorPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const [reloadKey, setReloadKey] = useState(0);
+	const [dialogAction, setDialogAction] = useState<DialogAction | null>(null);
 	const { user, ready } = useSessionUser();
-	const canManage =
-		user?.roles.includes("admin") || user?.roles.includes("psicologo");
+	const canManage = Boolean(
+		user?.roles.includes("admin") || user?.roles.includes("psicologo"),
+	);
 	const isAdmin = user?.roles.includes("admin") ?? false;
-	const readOnly =
-		detail !== null && (detail.status !== "draft" || detail.source === "seed");
-	const canPublish =
-		isAdmin && detail?.status === "draft" && detail.source === "runtime";
-	const canArchive =
-		canManage && detail?.status === "published" && detail.source === "runtime";
+	const readOnly = Boolean(
+		detail && (detail.status !== "draft" || detail.source === "seed"),
+	);
+	const canPublish = Boolean(
+		isAdmin && detail?.status === "draft" && detail.source === "runtime",
+	);
+	const canArchive = Boolean(
+		canManage && detail?.status === "published" && detail.source === "runtime",
+	);
+	const readOnlyDescriptionId = "editor-read-only-description";
 
 	useEffect(() => {
 		if (!ready) return;
@@ -151,7 +177,10 @@ export default function VersionEditorPage() {
 			router.replace("/login");
 			return;
 		}
+
 		let cancelled = false;
+		setDetail(null);
+		setError(null);
 		apiFetch<ApiDetail>(`/api/v1/catalog/admin/versions/${params.versionId}`, {
 			token: localStorage.getItem("psico_token") ?? "",
 		})
@@ -159,26 +188,27 @@ export default function VersionEditorPage() {
 				if (!cancelled) setDetail(toDraft(data));
 			})
 			.catch((err) => {
-				if (!cancelled) {
-					setError(
-						err instanceof ApiError
-							? err.payload.message
-							: "No se pudo cargar la versión.",
-					);
-				}
+				if (cancelled) return;
+				setError(
+					err instanceof ApiError && err.payload.code.includes("not_found")
+						? "No se encontró esta versión del instrumento."
+						: "No se pudo cargar la versión. Revise el servicio e intente nuevamente.",
+				);
 			});
 		return () => {
 			cancelled = true;
 		};
-	}, [params.versionId, ready, canManage, router]);
+	}, [canManage, params.versionId, ready, reloadKey, router]);
 
 	function updateScale(orderIndex: number, patch: Partial<ScaleDraft>) {
 		setDetail((current) => {
 			if (!current) return current;
-			const scales = current.scales.map((scale, index) =>
-				index === orderIndex ? { ...scale, ...patch } : scale,
-			);
-			return { ...current, scales };
+			return {
+				...current,
+				scales: current.scales.map((scale, index) =>
+					index === orderIndex ? { ...scale, ...patch } : scale,
+				),
+			};
 		});
 	}
 
@@ -189,14 +219,19 @@ export default function VersionEditorPage() {
 	) {
 		setDetail((current) => {
 			if (!current) return current;
-			const scales = current.scales.map((scale, index) => {
-				if (index !== scaleIndex) return scale;
-				const items = scale.items.map((item, j) =>
-					j === itemIndex ? { ...item, ...patch } : item,
-				);
-				return { ...scale, items };
-			});
-			return { ...current, scales };
+			return {
+				...current,
+				scales: current.scales.map((scale, index) =>
+					index !== scaleIndex
+						? scale
+						: {
+								...scale,
+								items: scale.items.map((item, itemIndexInScale) =>
+									itemIndexInScale === itemIndex ? { ...item, ...patch } : item,
+								),
+							},
+				),
+			};
 		});
 	}
 
@@ -208,28 +243,31 @@ export default function VersionEditorPage() {
 	) {
 		setDetail((current) => {
 			if (!current) return current;
-			const scales = current.scales.map((scale, index) => {
-				if (index !== scaleIndex) return scale;
-				const items = scale.items.map((item, j) => {
-					if (j !== itemIndex) return item;
-					const options = item.options.map((option, k) =>
-						k === optionIndex ? { ...option, label } : option,
-					);
-					return { ...item, options };
-				});
-				return { ...scale, items };
-			});
-			return { ...current, scales };
+			return {
+				...current,
+				scales: current.scales.map((scale, scaleIndexInDetail) => {
+					if (scaleIndexInDetail !== scaleIndex) return scale;
+					return {
+						...scale,
+						items: scale.items.map((item, itemIndexInScale) => {
+							if (itemIndexInScale !== itemIndex) return item;
+							return {
+								...item,
+								options: item.options.map((option, optionIndexInItem) =>
+									optionIndexInItem === optionIndex ? { ...option, label } : option,
+								),
+							};
+						}),
+					};
+				}),
+			};
 		});
 	}
 
 	function addScale() {
 		setDetail((current) =>
 			current
-				? {
-						...current,
-						scales: [...current.scales, emptyScale(current.scales.length + 1)],
-					}
+				? { ...current, scales: [...current.scales, emptyScale(current.scales.length + 1)] }
 				: current,
 		);
 	}
@@ -237,49 +275,64 @@ export default function VersionEditorPage() {
 	function removeScale(index: number) {
 		setDetail((current) => {
 			if (!current) return current;
-			const scales = current.scales
-				.filter((_, i) => i !== index)
-				.map((scale, i) => ({ ...scale, display_order: i + 1 }));
-			return { ...current, scales };
+			return {
+				...current,
+				scales: current.scales
+					.filter((_, scaleIndex) => scaleIndex !== index)
+					.map((scale, scaleIndex) => ({ ...scale, display_order: scaleIndex + 1 })),
+			};
 		});
 	}
 
 	function addItem(scaleIndex: number) {
 		setDetail((current) => {
 			if (!current) return current;
-			const scales = current.scales.map((scale, index) => {
-				if (index !== scaleIndex) return scale;
-				const items = [
-					...scale.items,
-					{
-						item_order: scale.items.length + 1,
-						text: "",
-						locale: "es",
-						required: true,
-						options: NEUTRAL_OPTIONS.map((label, i) => ({
-							display_order: i + 1,
-							label,
-							locale: "es",
-						})),
-					},
-				];
-				return { ...scale, items };
-			});
-			return { ...current, scales };
+			return {
+				...current,
+				scales: current.scales.map((scale, index) =>
+					index !== scaleIndex
+						? scale
+						: {
+								...scale,
+								items: [
+									...scale.items,
+									{
+										item_order: scale.items.length + 1,
+										text: "",
+										locale: "es",
+										required: true,
+										options: NEUTRAL_OPTIONS.map((label, optionIndex) => ({
+											display_order: optionIndex + 1,
+											label,
+											locale: "es",
+										})),
+									},
+								],
+							},
+				),
+			};
 		});
 	}
 
 	function removeItem(scaleIndex: number, itemIndex: number) {
 		setDetail((current) => {
 			if (!current) return current;
-			const scales = current.scales.map((scale, index) => {
-				if (index !== scaleIndex) return scale;
-				const items = scale.items
-					.filter((_, i) => i !== itemIndex)
-					.map((item, i) => ({ ...item, item_order: i + 1 }));
-				return { ...scale, items };
-			});
-			return { ...current, scales };
+			return {
+				...current,
+				scales: current.scales.map((scale, index) =>
+					index !== scaleIndex
+						? scale
+						: {
+								...scale,
+								items: scale.items
+									.filter((_, currentItemIndex) => currentItemIndex !== itemIndex)
+									.map((item, currentItemIndex) => ({
+										...item,
+										item_order: currentItemIndex + 1,
+									})),
+							},
+				),
+			};
 		});
 	}
 
@@ -288,17 +341,18 @@ export default function VersionEditorPage() {
 		if (detail.scales.length === 0) return "Agregue al menos una escala.";
 		for (const scale of detail.scales) {
 			if (!scale.label.trim()) return "Toda escala necesita un nombre.";
-			if (scale.items.length === 0)
+			if (scale.items.length === 0) {
 				return `La escala «${scale.label}» necesita al menos un ítem.`;
+			}
 			for (const item of scale.items) {
-				if (!item.text.trim())
-					return `La escala «${scale.label}» tiene un ítem sin texto.`;
+				if (!item.text.trim()) return `La escala «${scale.label}» tiene un ítem sin texto.`;
 				if (item.options.length !== OPTION_COUNT) {
 					return `El ítem «${item.text}» debe tener exactamente ${OPTION_COUNT} opciones.`;
 				}
 				for (const option of item.options) {
-					if (!option.label.trim())
+					if (!option.label.trim()) {
 						return `El ítem «${item.text}» tiene una opción sin etiqueta.`;
+					}
 				}
 			}
 		}
@@ -346,247 +400,204 @@ export default function VersionEditorPage() {
 					},
 				},
 			);
-			setNotice("Borrador guardado correctamente.");
+			setNotice("Borrador guardado");
 		} catch (err) {
-			const apiError = err instanceof ApiError ? err.payload : null;
 			setError(
-				apiError
-					? `${apiError.message}${apiError.request_id ? ` (ID: ${apiError.request_id})` : ""}`
-					: "No se pudo guardar el borrador.",
+				err instanceof ApiError
+					? "No se pudo guardar el borrador. Revise los datos e intente nuevamente."
+					: "No se pudo conectar con el servicio. Intente nuevamente.",
 			);
 		} finally {
 			setBusy(false);
 		}
 	}
 
-	async function publish() {
+	function requestLifecycleAction(action: DialogAction) {
 		if (busy || !detail) return;
-		const validation = validate();
-		if (validation) {
-			setError(validation);
-			return;
+		if (action === "publish") {
+			const validation = validate();
+			if (validation) {
+				setError(validation);
+				return;
+			}
 		}
-		if (
-			!window.confirm(
-				"Publicar versión congela el contenido: ya no se podrá editar. ¿Confirmar publicación?",
-			)
-		) {
-			return;
-		}
-		setBusy(true);
 		setError(null);
 		setNotice(null);
+		setDialogAction(action);
+	}
+
+	async function confirmLifecycleAction() {
+		if (busy || !detail || !dialogAction) return;
+		const action = dialogAction;
+		setBusy(true);
+		setError(null);
 		try {
 			await apiFetch(
-				`/api/v1/catalog/admin/versions/${params.versionId}/publish`,
+				`/api/v1/catalog/admin/versions/${params.versionId}/${action}`,
 				{
 					method: "POST",
 					token: localStorage.getItem("psico_token") ?? "",
 					idempotencyKey: crypto.randomUUID(),
 				},
 			);
-			setNotice("Versión publicada. La publicación es inmutable.");
+			setNotice(
+				action === "publish"
+					? "Versión publicada. La publicación es inmutable."
+					: "Versión archivada.",
+			);
 			const refreshed = await apiFetch<ApiDetail>(
 				`/api/v1/catalog/admin/versions/${params.versionId}`,
 				{ token: localStorage.getItem("psico_token") ?? "" },
 			);
 			setDetail(toDraft(refreshed));
 		} catch (err) {
-			const apiError = err instanceof ApiError ? err.payload : null;
 			setError(
-				apiError
-					? `${apiError.message}${apiError.request_id ? ` (ID: ${apiError.request_id})` : ""}`
-					: "No se pudo publicar la versión.",
+				err instanceof ApiError
+					? "No se pudo actualizar el estado de la versión. Intente nuevamente."
+					: "No se pudo conectar con el servicio. Intente nuevamente.",
 			);
 		} finally {
 			setBusy(false);
+			setDialogAction(null);
 		}
 	}
 
-	async function archive() {
-		if (busy || !detail) return;
-		if (
-			!window.confirm(
-				"Archivar conserva el historial de referencias. ¿Confirmar archivo?",
-			)
-		) {
-			return;
-		}
-		setBusy(true);
-		setError(null);
-		setNotice(null);
-		try {
-			await apiFetch(
-				`/api/v1/catalog/admin/versions/${params.versionId}/archive`,
-				{
-					method: "POST",
-					token: localStorage.getItem("psico_token") ?? "",
-					idempotencyKey: crypto.randomUUID(),
-				},
-			);
-			setNotice("Versión archivada.");
-			const refreshed = await apiFetch<ApiDetail>(
-				`/api/v1/catalog/admin/versions/${params.versionId}`,
-				{ token: localStorage.getItem("psico_token") ?? "" },
-			);
-			setDetail(toDraft(refreshed));
-		} catch (err) {
-			const apiError = err instanceof ApiError ? err.payload : null;
-			setError(
-				apiError
-					? `${apiError.message}${apiError.request_id ? ` (ID: ${apiError.request_id})` : ""}`
-					: "No se pudo archivar la versión.",
-			);
-		} finally {
-			setBusy(false);
-		}
+	if (!ready || !user || !canManage) {
+		return (
+			<div className={styles.page}>
+				<Skeleton variant="block" label="Cargando el editor…" />
+			</div>
+		);
 	}
 
 	if (error && !detail) {
 		return (
-			<main
-				style={{
-					fontFamily: "system-ui, sans-serif",
-					maxWidth: 720,
-					margin: "2rem auto",
-					padding: "0 1rem",
-				}}
-			>
-				<h1>Catálogo de instrumentos</h1>
-				<p style={{ color: "#b3261e" }}>{error}</p>
-				<Link href="/catalogo">Volver al catálogo</Link>
-			</main>
+			<div className={styles.page}>
+				<ErrorState
+					title="No se pudo cargar la versión"
+					message={error}
+					onRetry={() => setReloadKey((current) => current + 1)}
+					backAction={<Link href="/catalogo">Volver al catálogo</Link>}
+				/>
+			</div>
 		);
 	}
 
 	if (!detail) {
 		return (
-			<p style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
-				Cargando…
-			</p>
+			<div className={styles.page}>
+				<Skeleton variant="block" label="Cargando el editor…" />
+			</div>
 		);
 	}
 
-	const statusLabel =
-		detail.status === "draft"
-			? "Borrador"
-			: detail.status === "published"
-				? "Versión publicada"
-				: "Versión archivada";
+	const status = statusFor(detail.status);
+	const dialogTitle = dialogAction === "publish" ? "Publicar versión" : "Archivar versión";
+	const dialogDescription =
+		dialogAction === "publish"
+			? "La publicación congela el contenido y la versión ya no podrá editarse."
+			: "El archivo conserva el historial y retira esta versión del catálogo activo.";
 
 	return (
-		<main
-			style={{
-				fontFamily: "system-ui, sans-serif",
-				maxWidth: 900,
-				margin: "2rem auto",
-				padding: "0 1rem",
-			}}
-		>
-			<header
-				style={{
-					display: "flex",
-					justifyContent: "space-between",
-					alignItems: "center",
-					flexWrap: "wrap",
-					gap: "0.5rem",
-				}}
-			>
+		<div className={styles.page}>
+			<Breadcrumb
+				items={[
+					{ label: "Catálogo", href: "/catalogo" },
+					{ label: detail.instrument_key },
+					{ label: `Versión ${detail.version_no}`, current: true },
+				]}
+			/>
+
+			<header className={styles.header}>
 				<div>
-					<h1 style={{ marginBottom: "0.25rem" }}>
-						{detail.title}{" "}
-						<span style={{ color: "#666", fontWeight: "normal" }}>
-							({detail.instrument_key})
-						</span>
+					<p className={styles.eyebrow}>Editor de versión</p>
+					<h1>
+						{detail.title} <span className={styles.key}>({detail.instrument_key})</span>
 					</h1>
-					<p style={{ margin: 0, color: "#666" }}>
-						v{detail.version_no} · {statusLabel}
-						{detail.source === "seed" ? (
-							<span
-								title="Instrumento de referencia (sintético)"
-								style={{ marginLeft: "0.5rem", color: "#8a5a00" }}
-							>
-								· referencia · solo lectura
-							</span>
-						) : null}
+					<p className={styles.meta}>
+						<span className={styles.version}>v{detail.version_no}</span>
 						{detail.published_at
 							? ` · publicada el ${new Date(detail.published_at).toLocaleString("es-ES")}`
 							: null}
 					</p>
 				</div>
-				<Link href="/catalogo">← Volver al catálogo</Link>
+				<StatusLabel kind={status.kind} symbol={detail.source === "seed" ? "·" : undefined}>
+					{detail.source === "seed" ? "Referencia · sintético" : status.label}
+				</StatusLabel>
 			</header>
 
 			{readOnly ? (
-				<p style={{ color: "#8a5a00" }}>
+				<p id={readOnlyDescriptionId} className={styles.readOnlyNotice}>
 					{detail.source === "seed"
-						? "Este instrumento es de referencia y no se puede editar."
-						: "La versión publicada es inmutable."}
+						? "Esta versión de referencia es de solo lectura y no se puede editar."
+						: "La versión publicada es inmutable y no se puede editar."}
 				</p>
 			) : null}
-			{error ? <p style={{ color: "#b3261e" }}>{error}</p> : null}
-			{notice ? <p style={{ color: "#1e8e3e" }}>{notice}</p> : null}
+			{error ? <Notice tone="error" role="alert" message={error} /> : null}
+			{notice ? <Notice tone="success" role="status" message={notice} /> : null}
 
-			<section style={{ marginTop: "1.5rem" }}>
-				<h2>Escalas</h2>
+			<section className={styles.content} aria-labelledby="scales-heading">
+				<div className={styles.sectionHeader}>
+					<div>
+						<p className={styles.kicker}>Contenido</p>
+						<h2 id="scales-heading">Escalas</h2>
+					</div>
+					{!readOnly ? (
+						<Button type="button" size="compact" variant="secondary" onClick={addScale}>
+							Agregar escala
+						</Button>
+					) : null}
+				</div>
+
 				{detail.scales.map((scale, scaleIndex) => (
-					<fieldset
-						key={scale.id ?? `scale-${scaleIndex}`}
-						style={{ marginBottom: "1rem", padding: "1rem" }}
-					>
-						<legend
-							style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
-						>
+					<fieldset className={styles.scale} key={scale.id ?? `scale-${scaleIndex}`}>
+						<legend className={styles.legend}>
 							<span>Escala {scale.display_order}</span>
 							{!readOnly ? (
-								<button
+								<Button
 									type="button"
+									size="compact"
+									variant="ghost"
 									onClick={() => removeScale(scaleIndex)}
-									style={{ cursor: "pointer", fontSize: "0.8rem" }}
 								>
 									Quitar escala
-								</button>
+								</Button>
 							) : null}
 						</legend>
-						<label style={{ display: "block", marginBottom: "0.5rem" }}>
-							Nombre
-							<input
-								type="text"
-								value={scale.label}
-								onChange={(event) =>
-									updateScale(scaleIndex, { label: event.target.value })
-								}
-								disabled={readOnly}
-								style={{ display: "block", width: "100%", padding: "0.4rem" }}
-							/>
-						</label>
-						{scale.items.map((item, itemIndex) => (
-							<fieldset
-								key={item.id ?? `item-${scaleIndex}-${itemIndex}`}
-								style={{ marginBottom: "0.75rem", padding: "0.75rem" }}
-							>
-								<legend
-									style={{
-										display: "flex",
-										gap: "0.5rem",
-										alignItems: "center",
-									}}
+						<Field
+							id={`scale-${scaleIndex}-label`}
+							label="Nombre de la escala"
+							value={scale.label}
+							onChange={(event) =>
+								updateScale(scaleIndex, { label: event.target.value })
+							}
+							disabled={readOnly}
+							aria-describedby={readOnly ? readOnlyDescriptionId : undefined}
+							required
+						/>
+
+						<div className={styles.items}>
+							{scale.items.map((item, itemIndex) => (
+								<fieldset
+									className={styles.item}
+									key={item.id ?? `item-${scaleIndex}-${itemIndex}`}
 								>
-									<span>Ítem {item.item_order}</span>
-									{!readOnly ? (
-										<button
-											type="button"
-											onClick={() => removeItem(scaleIndex, itemIndex)}
-											style={{ cursor: "pointer", fontSize: "0.8rem" }}
-										>
-											Quitar ítem
-										</button>
-									) : null}
-								</legend>
-								<label style={{ display: "block", marginBottom: "0.5rem" }}>
-									Texto
-									<input
-										type="text"
+									<legend className={styles.legend}>
+										<span>Ítem {item.item_order}</span>
+										{!readOnly ? (
+											<Button
+												type="button"
+												size="compact"
+												variant="ghost"
+												onClick={() => removeItem(scaleIndex, itemIndex)}
+											>
+												Quitar ítem
+											</Button>
+										) : null}
+									</legend>
+									<Field
+										id={`scale-${scaleIndex}-item-${itemIndex}-text`}
+										label="Texto del ítem"
 										value={item.text}
 										onChange={(event) =>
 											updateItem(scaleIndex, itemIndex, {
@@ -594,55 +605,30 @@ export default function VersionEditorPage() {
 											})
 										}
 										disabled={readOnly}
-										style={{
-											display: "block",
-											width: "100%",
-											padding: "0.4rem",
-										}}
+										aria-describedby={readOnly ? readOnlyDescriptionId : undefined}
+										required
 									/>
-								</label>
-								<label
-									style={{
-										display: "flex",
-										gap: "0.4rem",
-										alignItems: "center",
-										marginBottom: "0.5rem",
-									}}
-								>
-									<input
-										type="checkbox"
+									<Field
+										id={`scale-${scaleIndex}-item-${itemIndex}-required`}
+										label="Ítem obligatorio"
+										control="checkbox"
 										checked={item.required}
 										onChange={(event) =>
 											updateItem(scaleIndex, itemIndex, {
-												required: event.target.checked,
+												required: (event.target as HTMLInputElement).checked,
 											})
 										}
 										disabled={readOnly}
+										aria-describedby={readOnly ? readOnlyDescriptionId : undefined}
 									/>
-									Obligatorio
-								</label>
-								<div>
-									<span style={{ fontSize: "0.85rem", color: "#666" }}>
-										Opciones de respuesta (1–5)
-									</span>
-									{item.options.map((option, optionIndex) => (
-										<label
-											key={
-												option.id ??
-												`opt-${scaleIndex}-${itemIndex}-${optionIndex}`
-											}
-											style={{
-												display: "flex",
-												gap: "0.5rem",
-												alignItems: "center",
-												marginTop: "0.25rem",
-											}}
-										>
-											<span style={{ minWidth: "1.2rem" }}>
-												{option.display_order}.
-											</span>
-											<input
-												type="text"
+
+									<fieldset className={styles.options}>
+										<legend>Opciones de respuesta</legend>
+										{item.options.map((option, optionIndex) => (
+											<Field
+												key={option.id ?? `option-${scaleIndex}-${itemIndex}-${optionIndex}`}
+												id={`scale-${scaleIndex}-item-${itemIndex}-option-${optionIndex}`}
+												label={`Opción ${option.display_order}`}
 												value={option.label}
 												onChange={(event) =>
 													updateOption(
@@ -653,79 +639,91 @@ export default function VersionEditorPage() {
 													)
 												}
 												disabled={readOnly}
-												style={{ flex: 1, padding: "0.3rem" }}
+												aria-describedby={readOnly ? readOnlyDescriptionId : undefined}
 											/>
-										</label>
-									))}
-								</div>
-							</fieldset>
-						))}
+										))}
+									</fieldset>
+								</fieldset>
+							))}
+						</div>
 						{!readOnly ? (
-							<button
+							<Button
 								type="button"
+								size="compact"
+								variant="secondary"
 								onClick={() => addItem(scaleIndex)}
-								style={{ cursor: "pointer" }}
 							>
-								+ Agregar ítem
-							</button>
+								Agregar ítem
+							</Button>
 						) : null}
 					</fieldset>
 				))}
-				{!readOnly ? (
-					<button
-						type="button"
-						onClick={addScale}
-						style={{ cursor: "pointer" }}
-					>
-						+ Agregar escala
-					</button>
-				) : null}
 			</section>
 
-			<section
-				style={{
-					marginTop: "1.5rem",
-					display: "flex",
-					gap: "0.5rem",
-					flexWrap: "wrap",
-				}}
-			>
+			<footer className={styles.actions}>
 				{!readOnly ? (
-					<button
-						onClick={saveDraft}
-						disabled={busy}
-						style={{ padding: "0.6rem", cursor: "pointer" }}
-					>
-						{busy ? "Guardando…" : "Guardar borrador"}
-					</button>
+					<Button type="button" busy={busy} pendingLabel="Guardando…" onClick={saveDraft}>
+						Guardar borrador
+					</Button>
 				) : null}
 				{canPublish ? (
-					<button
-						onClick={publish}
+					<Button
+						type="button"
+						variant="secondary"
 						disabled={busy}
-						style={{ padding: "0.6rem", cursor: "pointer" }}
+						onClick={() => requestLifecycleAction("publish")}
 					>
-						{busy ? "Publicando…" : "Publicar versión"}
-					</button>
+						Publicar versión
+					</Button>
 				) : null}
 				{canArchive ? (
-					<button
-						onClick={archive}
+					<Button
+						type="button"
+						variant="danger"
 						disabled={busy}
-						style={{ padding: "0.6rem", cursor: "pointer" }}
+						onClick={() => requestLifecycleAction("archive")}
 					>
-						{busy ? "Archivando…" : "Archivar versión"}
-					</button>
+						Archivar versión
+					</Button>
 				) : null}
 				{detail.status === "published" ? (
 					<Link
+						className={styles.secondaryLink}
 						href={`/catalogo/${params.instrumentId}/versiones/${params.versionId}/vista`}
-						style={{ alignSelf: "center" }}
 					>
 						Ver vista del evaluado
 					</Link>
 				) : null}
-			</section>
-		</main>
+			</footer>
+
+			<Dialog
+				open={dialogAction !== null}
+				title={dialogTitle}
+				description={dialogDescription}
+				onClose={() => {
+					if (!busy) setDialogAction(null);
+				}}
+			>
+				<Button
+					type="button"
+					variant="secondary"
+					disabled={busy}
+					data-dialog-cancel
+					onClick={() => setDialogAction(null)}
+				>
+					Cancelar
+				</Button>
+				<Button
+					type="button"
+					variant={dialogAction === "archive" ? "danger" : "primary"}
+					busy={busy}
+					pendingLabel={dialogAction === "archive" ? "Archivando…" : "Publicando…"}
+					data-dialog-confirm
+					onClick={confirmLifecycleAction}
+				>
+					{dialogAction === "archive" ? "Confirmar archivo" : "Confirmar publicación"}
+				</Button>
+			</Dialog>
+		</div>
 	);
 }

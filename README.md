@@ -30,6 +30,9 @@ psico/
 > **¿Trabajás con un agente de IA?** Leé [AGENTS.md](./AGENTS.md) primero:
 > explica cómo usar OpenSpec como memoria del proyecto, las invariantes que no
 > se negocian y las trampas conocidas del entorno.
+>
+> **¿Arrancás la Fase 3 (Sesión de evaluación)?** Leé
+> [HANDOFF-F3.md](./HANDOFF-F3.md) — estado del repo, contrato F3 y qué construir.
 
 ## Inicio rápido
 

@@ -195,8 +195,20 @@ class PublishedVersionRead(CatalogModel):
     scales: list[PublishedScaleRead]
 
 
+class AdminListRow(VersionSummary):
+    """Version row enriched with instrument identity for the authoring list.
+
+    The web catalog table renders key/title per row; keeping the version
+    summary fields preserves the archived contract (one row per version).
+    """
+
+    key: str
+    title: str
+    description: str | None = None
+
+
 class CatalogListResponse(CatalogModel):
-    items: list[VersionSummary]
+    items: list[AdminListRow]
     page: int
     page_size: int
     total: int

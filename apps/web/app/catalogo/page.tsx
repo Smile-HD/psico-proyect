@@ -7,7 +7,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { clearSession, getSessionUser } from "@/lib/auth";
 
 type InstrumentRow = {
-	id: string;
+	instrument_id: string;
 	key: string;
 	title: string;
 	description: string | null;
@@ -171,7 +171,10 @@ export default function CatalogListPage() {
 						</thead>
 						<tbody>
 							{rows.map((row) => (
-								<tr key={row.id} style={{ borderBottom: "1px solid #eee" }}>
+								<tr
+									key={row.instrument_version_id}
+									style={{ borderBottom: "1px solid #eee" }}
+								>
 									<td style={{ padding: "0.5rem" }}>
 										{row.key}
 										{row.source === "seed" ? (
@@ -194,7 +197,7 @@ export default function CatalogListPage() {
 									<td style={{ padding: "0.5rem" }}>v{row.version_no}</td>
 									<td style={{ padding: "0.5rem" }}>
 										<Link
-											href={`/catalogo/${row.id}/versiones/${row.instrument_version_id}`}
+											href={`/catalogo/${row.instrument_id}/versiones/${row.instrument_version_id}`}
 										>
 											{row.source === "seed"
 												? "Ver"

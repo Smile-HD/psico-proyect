@@ -39,6 +39,7 @@ from app.modules.assessment_authoring.repository import CatalogRepository
 from app.schemas.catalog import (
     AdminInstrumentDetail,
     AdminItemRead,
+    AdminListRow,
     AdminOptionRead,
     AdminScaleRead,
     AdminVersionDetail,
@@ -102,6 +103,27 @@ class CatalogService:
             synthetic=instrument.synthetic,
             source=instrument.source,
             created_at=instrument.created_at,
+        )
+
+    @staticmethod
+    def _list_row(version: InstrumentVersion) -> AdminListRow:
+        instrument = version.instrument
+        return AdminListRow(
+            instrument_version_id=version.id,
+            instrument_id=version.instrument_id,
+            version_no=version.version_no,
+            status=version.status,
+            response_type=version.response_type,
+            is_immutable=version.is_immutable,
+            created_at=version.created_at,
+            updated_at=version.updated_at,
+            published_at=version.published_at,
+            archived_at=version.archived_at,
+            synthetic=version.synthetic,
+            source=version.source,
+            key=instrument.key,
+            title=instrument.title,
+            description=instrument.description,
         )
 
     @staticmethod
@@ -735,7 +757,7 @@ class CatalogService:
             db, page=page, page_size=page_size, key=key, status=status
         )
         return CatalogListResponse(
-            items=[self._summary(row) for row in rows],
+            items=[self._list_row(row) for row in rows],
             page=page,
             page_size=page_size,
             total=total,

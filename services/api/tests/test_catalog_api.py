@@ -7,7 +7,6 @@ import uuid
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from app.core.auth import decode_access_token
 from app.core.config import settings
 from app.main import app
 from app.models.audit import AuditLog
@@ -192,3 +191,31 @@ def test_same_key_different_body_conflicts_without_second_instrument(
         )
         assert second.status_code == 409
         assert second.json()["error"]["message"] == "idempotency_key_reused"
+
+
+def test_admin_list_rows_carry_instrument_identity(seeded_db_session) -> None:
+    """The authoring list must render key/title per row (web catalog table)."""
+    with TestClient(app) as client:
+        admin = _login(client, "admin", settings.dev_password_admin)
+        resp = client.get(
+            "/api/v1/catalog/admin/instruments",
+            headers=_headers(admin),
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert set(body.keys()) == {"items", "page", "page_size", "total"}
+        assert body["items"], "seed must provide at least one instrument row"
+        for row in body["items"]:
+            # Web InstrumentRow contract: instrument identity + version summary.
+            for field in (
+                "key",
+                "title",
+                "instrument_id",
+                "instrument_version_id",
+                "status",
+                "version_no",
+                "source",
+                "synthetic",
+            ):
+                assert field in row, f"list row missing {field}"
+            assert "id" not in row, "legacy web field must not appear"

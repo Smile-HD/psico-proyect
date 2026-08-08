@@ -152,7 +152,26 @@ class AdminScaleRead(CatalogModel):
 
 
 class AdminVersionDetail(CatalogModel):
-    summary: VersionSummary
+    """Flat authoring detail for one version.
+
+    Fields mirror VersionSummary plus instrument identity (title, key) so the
+    web editor renders header and status without extra lookups.
+    """
+
+    instrument_version_id: UUID
+    instrument_id: UUID
+    version_no: int
+    status: Literal["draft", "published", "archived"]
+    response_type: ResponseType
+    is_immutable: bool
+    created_at: datetime
+    updated_at: datetime
+    published_at: datetime | None = None
+    archived_at: datetime | None = None
+    synthetic: bool
+    source: str
+    title: str
+    instrument_key: str
     adaptation: AdaptationMetadata | None = None
     scales: list[AdminScaleRead]
 

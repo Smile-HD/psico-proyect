@@ -219,3 +219,30 @@ def test_admin_list_rows_carry_instrument_identity(seeded_db_session) -> None:
             ):
                 assert field in row, f"list row missing {field}"
             assert "id" not in row, "legacy web field must not appear"
+
+
+def test_admin_version_detail_flat_contract(seeded_db_session) -> None:
+    """The web editor reads status/title/key at the top level of the detail."""
+    with TestClient(app) as client:
+        psychologist = _login(client, "psicologo", settings.dev_password_psicologo)
+        created = client.post(
+            "/api/v1/catalog/admin/instruments",
+            headers=_headers(psychologist, "detail-shape"),
+            json={"key": "CAT-DETAIL-01", "title": "Detalle plano"},
+        )
+        assert created.status_code == 201
+        version_id = created.json()["draft"]["instrument_version_id"]
+        detail = client.get(
+            f"/api/v1/catalog/admin/versions/{version_id}",
+            headers=_headers(psychologist),
+        )
+        assert detail.status_code == 200
+        body = detail.json()
+        # Web editor contract: flat fields, no nested summary envelope.
+        assert "summary" not in body, "detail must not wrap fields in summary"
+        assert body["status"] == "draft"
+        assert body["title"] == "Detalle plano"
+        assert body["instrument_key"] == "CAT-DETAIL-01"
+        assert body["version_no"] == 1
+        assert body["source"] == "runtime"
+        assert isinstance(body["scales"], list)

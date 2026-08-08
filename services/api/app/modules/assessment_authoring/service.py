@@ -819,7 +819,20 @@ class CatalogService:
                 )
             )
         return AdminVersionDetail(
-            summary=self._summary(version),
+            instrument_version_id=version.id,
+            instrument_id=version.instrument_id,
+            version_no=version.version_no,
+            status=version.status,
+            response_type=version.response_type,
+            is_immutable=version.is_immutable,
+            created_at=version.created_at,
+            updated_at=version.updated_at,
+            published_at=version.published_at,
+            archived_at=version.archived_at,
+            synthetic=version.synthetic,
+            source=version.source,
+            title=version.instrument.title,
+            instrument_key=version.instrument.key,
             adaptation=version.adaptation_metadata,
             scales=scales,
         )

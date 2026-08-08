@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
-import { getSessionUser } from "@/lib/auth";
+import { ErrorState } from "@/components/ui/Feedback";
+import LikertMatrix, { type LikertItem } from "@/components/ui/LikertMatrix";
+import Skeleton from "@/components/ui/Skeleton";
+import StatusLabel from "@/components/ui/StatusLabel";
+import styles from "./page.module.css";
 
 type PublishedOption = {
 	id: string;
@@ -41,6 +45,20 @@ type PublishedVersion = {
 	scales: PublishedScale[];
 };
 
+function toMatrixItems(items: PublishedItem[]): LikertItem[] {
+	return items.map((item) => ({
+		id: item.id,
+		order: item.item_order,
+		text: item.text,
+		required: item.required,
+		options: item.response_options.map((option) => ({
+			id: option.id,
+			order: option.display_order,
+			label: option.label,
+		})),
+	}));
+}
+
 export default function PublishedViewPage() {
 	const params = useParams<{ instrumentId: string; versionId: string }>();
 	const [version, setVersion] = useState<PublishedVersion | null>(null);
@@ -73,92 +91,70 @@ export default function PublishedViewPage() {
 
 	if (error) {
 		return (
-			<main
-				style={{
-					fontFamily: "system-ui, sans-serif",
-					maxWidth: 720,
-					margin: "2rem auto",
-					padding: "0 1rem",
-				}}
-			>
-				<h1>Vista del evaluado</h1>
-				<p style={{ color: "#b3261e" }}>{error}</p>
-				<Link href="/catalogo">← Volver al catálogo</Link>
+			<main id="main-content" className={styles.root}>
+				<ErrorState
+					title="No se pudo cargar la versión publicada"
+					message={error}
+					backAction={
+						<Link href="/catalogo" className={styles.footerLink}>
+							Volver al catálogo
+						</Link>
+					}
+				/>
 			</main>
 		);
 	}
 
 	if (!version) {
 		return (
-			<p style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
-				Cargando…
-			</p>
+			<main id="main-content" className={styles.root}>
+				<Skeleton variant="heading" />
+				<Skeleton variant="table" />
+			</main>
 		);
 	}
 
 	return (
-		<main
-			style={{
-				fontFamily: "system-ui, sans-serif",
-				maxWidth: 760,
-				margin: "2rem auto",
-				padding: "0 1rem",
-			}}
-		>
-			<header>
-				<h1 style={{ marginBottom: "0.25rem" }}>{version.title}</h1>
-				<p style={{ margin: 0, color: "#666" }}>
-					{version.instrument_key} · v{version.version_no} · publicada el{" "}
+		<main id="main-content" className={styles.root}>
+			<header className={styles.header}>
+				<h1>{version.title}</h1>
+				<p className={styles.metadata}>
+					{version.instrument_key} · v{version.version_no} ·{" "}
+					<StatusLabel kind="published">Publicada</StatusLabel>
 					{version.published_at
-						? new Date(version.published_at).toLocaleString("es-ES")
-						: ""}
+						? ` · ${new Date(version.published_at).toLocaleString("es-ES")}`
+						: null}
 				</p>
-				{version.description ? <p>{version.description}</p> : null}
+				{version.description ? (
+					<p className={styles.description}>{version.description}</p>
+				) : null}
 			</header>
 
-			<p style={{ color: "#666", fontSize: "0.9rem" }}>
+			<p className={styles.disclaimer}>
 				Esta es una vista exploratoria de orientación. Las opciones se presentan
 				con sus etiquetas; los valores numéricos internos no se muestran.
 			</p>
 
 			{version.scales.map((scale) => (
-				<section key={scale.id} style={{ marginTop: "1.5rem" }}>
-					<h2>
+				<section key={scale.id} className={styles.scale} aria-labelledby={`scale-${scale.id}`}>
+					<h2 id={`scale-${scale.id}`}>
 						{scale.display_order}. {scale.label}
 					</h2>
-					{scale.items.map((item) => (
-						<div
-							key={item.id}
-							style={{
-								marginBottom: "1rem",
-								padding: "0.75rem",
-								border: "1px solid #eee",
-								borderRadius: 4,
-							}}
-						>
-							<p style={{ margin: 0, fontWeight: item.required ? 600 : 400 }}>
-								{item.item_order}. {item.text}
-								{item.required ? (
-									<span style={{ color: "#b3261e" }}> *</span>
-								) : null}
-							</p>
-							<ul style={{ margin: "0.5rem 0 0", paddingLeft: "1.2rem" }}>
-								{item.response_options.map((option) => (
-									<li key={option.id}>{option.label}</li>
-								))}
-							</ul>
-						</div>
-					))}
+					<LikertMatrix
+						caption={`${scale.label} — opciones de respuesta`}
+						items={toMatrixItems(scale.items)}
+					/>
 				</section>
 			))}
 
-			<footer style={{ marginTop: "2.5rem" }}>
+			<footer className={styles.footer}>
 				<Link
+					className={styles.footerLink}
 					href={`/catalogo/${params.instrumentId}/versiones/${params.versionId}`}
 				>
-					← Volver al detalle
+					Volver al detalle
 				</Link>
-				<p style={{ color: "#666", fontSize: "0.85rem", marginTop: "1rem" }}>
+				<p className={styles.footerNote}>
 					Contenido sintético y de uso exclusivo para investigación
 					(research-only).
 				</p>

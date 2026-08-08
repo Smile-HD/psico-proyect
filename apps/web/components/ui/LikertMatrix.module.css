@@ -1,0 +1,62 @@
+.scrollRegion {
+	max-width: 100%;
+	overflow-x: auto;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	background: var(--color-surface);
+}
+
+.table {
+	width: 100%;
+	min-width: 48rem;
+	border-collapse: collapse;
+	color: var(--color-ink-1);
+}
+
+.table caption {
+	padding: var(--space-3) var(--space-4);
+	color: var(--color-ink-2);
+	font-weight: 600;
+	text-align: left;
+}
+
+.table th,
+.table td {
+	padding: var(--space-3) var(--space-4);
+	border-bottom: 1px solid var(--color-border);
+	vertical-align: middle;
+	text-align: center;
+}
+
+.table thead th {
+	background: var(--color-canvas);
+	font-weight: 600;
+	white-space: normal;
+}
+
+.table tbody th {
+	min-width: 16rem;
+	text-align: left;
+	font-weight: 600;
+}
+
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.required {
+	color: var(--color-ink-2);
+	font-size: var(--font-size-supporting);
+	font-weight: 400;
+}
+
+.cellMark {
+	color: var(--color-ink-2);
+}
+
+.table input {
+	width: 1.25rem;
+	height: 1.25rem;
+	accent-color: var(--color-accent);
+}

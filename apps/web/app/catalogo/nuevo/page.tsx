@@ -1,37 +1,78 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import Button from "@/components/ui/Button";
+import { Notice } from "@/components/ui/Feedback";
+import EmptyState from "@/components/ui/EmptyState";
+import Field, { type FieldControlHandle } from "@/components/ui/Field";
+import Skeleton from "@/components/ui/Skeleton";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useSessionUser } from "@/lib/auth";
+
+import styles from "./page.module.css";
 
 type CreateResponse = {
 	instrument: { id: string };
 	draft: { instrument_version_id: string };
 };
 
+type FieldErrors = {
+	key?: string;
+	title?: string;
+};
+
+const KEY_PATTERN = /^[A-Z0-9_.-]+$/;
+const KEY_HELP =
+	"Use mayúsculas, números, punto, guion bajo o guion medio. Ejemplo: CAT-01.";
+
 export default function NewInstrumentPage() {
 	const router = useRouter();
+	const keyRef = useRef<FieldControlHandle>(null);
+	const titleRef = useRef<FieldControlHandle>(null);
 	const [key, setKey] = useState("");
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
-	const [error, setError] = useState<string | null>(null);
+	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+	const [formError, setFormError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const { user, ready } = useSessionUser();
-	const canManage =
-		user?.roles.includes("admin") || user?.roles.includes("psicologo");
+	const canManage = Boolean(
+		user?.roles.includes("admin") || user?.roles.includes("psicologo"),
+	);
 
-	async function onSubmit(event: React.FormEvent) {
+	useEffect(() => {
+		if (ready && !user) {
+			router.replace("/login");
+		}
+	}, [ready, router, user]);
+
+	function validateFields(): FieldErrors {
+		const nextErrors: FieldErrors = {};
+		if (!KEY_PATTERN.test(key)) {
+			nextErrors.key =
+				"La clave debe usar solo mayúsculas, números, punto, guion bajo o guion medio.";
+		}
+		if (!title.trim()) {
+			nextErrors.title = "Ingrese un título para el instrumento.";
+		}
+		return nextErrors;
+	}
+
+	async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		if (busy) return;
-		if (!/^[A-Z0-9_.-]+$/.test(key)) {
-			setError(
-				"La clave solo admite mayúsculas, números, punto, guion bajo y guion medio.",
-			);
+		const nextErrors = validateFields();
+		setFieldErrors(nextErrors);
+		setFormError(null);
+		const firstInvalid = nextErrors.key ? keyRef : nextErrors.title ? titleRef : null;
+		if (firstInvalid) {
+			firstInvalid.current?.focus();
 			return;
 		}
+
 		setBusy(true);
-		setError(null);
 		try {
 			const created = await apiFetch<CreateResponse>(
 				"/api/v1/catalog/admin/instruments",
@@ -50,90 +91,103 @@ export default function NewInstrumentPage() {
 				`/catalogo/${created.instrument.id}/versiones/${created.draft.instrument_version_id}`,
 			);
 		} catch (err) {
-			setError(
+			setFormError(
 				err instanceof ApiError
-					? err.payload.message
-					: "No se pudo crear el instrumento.",
+					? "No se pudo crear el instrumento. Revise los datos e intente nuevamente."
+					: "No se pudo conectar con el servicio. Intente nuevamente.",
 			);
 			setBusy(false);
 		}
 	}
 
-	if (ready && !canManage) {
+	if (!ready || !user) {
 		return (
-			<p style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
-				No tiene permisos para esta sección.
-			</p>
+			<div className={styles.page}>
+				<Skeleton variant="block" label="Cargando el formulario…" />
+			</div>
+		);
+	}
+
+	if (!canManage) {
+		return (
+			<div className={styles.page}>
+				<EmptyState
+					contextLabel="Nuevo instrumento"
+					title="No puede crear instrumentos"
+					description="Su cuenta no tiene permisos de administración. Solicite acceso a una persona administradora del catálogo."
+				/>
+			</div>
 		);
 	}
 
 	return (
-		<main
-			style={{
-				fontFamily: "system-ui, sans-serif",
-				maxWidth: 640,
-				margin: "2rem auto",
-				padding: "0 1rem",
-			}}
-		>
-			<h1>Nuevo instrumento</h1>
-			<form
-				onSubmit={onSubmit}
-				style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-			>
-				<label>
-					Clave (única, mayúsculas)
-					<input
-						type="text"
-						value={key}
-						onChange={(event) => setKey(event.target.value.toUpperCase())}
-						required
-						pattern="[A-Z0-9_.-]+"
-						placeholder="EJ: CAT-01"
-						style={{ display: "block", width: "100%", padding: "0.5rem" }}
-					/>
-				</label>
-				<label>
-					Título
-					<input
-						type="text"
-						value={title}
-						onChange={(event) => setTitle(event.target.value)}
-						required
-						style={{ display: "block", width: "100%", padding: "0.5rem" }}
-					/>
-				</label>
-				<label>
-					Descripción (opcional)
-					<textarea
-						value={description}
-						onChange={(event) => setDescription(event.target.value)}
-						rows={3}
-						style={{ display: "block", width: "100%", padding: "0.5rem" }}
-					/>
-				</label>
-				{error ? <p style={{ color: "#b3261e" }}>{error}</p> : null}
-				<div style={{ display: "flex", gap: "0.5rem" }}>
-					<button
-						type="submit"
-						disabled={busy}
-						style={{ padding: "0.6rem", cursor: "pointer" }}
-					>
-						{busy ? "Creando…" : "Crear instrumento"}
-					</button>
-					<button
+		<div className={styles.page}>
+			<header className={styles.header}>
+				<p className={styles.eyebrow}>Catálogo · alta</p>
+				<h1>Nuevo instrumento</h1>
+				<p>
+					Registre los datos iniciales. El contenido de la versión se completa después.
+				</p>
+			</header>
+
+			<form className={styles.form} onSubmit={onSubmit} noValidate>
+				{formError ? <Notice tone="error" role="alert" message={formError} /> : null}
+				<Field
+					ref={keyRef}
+					id="instrument-key"
+					name="key"
+					label="Clave"
+					value={key}
+					onChange={(event) => {
+						setKey(event.target.value.toUpperCase());
+						if (fieldErrors.key) {
+							setFieldErrors((current) => ({ ...current, key: undefined }));
+						}
+					}}
+					helperText={KEY_HELP}
+					error={fieldErrors.key}
+					required
+					placeholder="CAT-01"
+					pattern="[A-Z0-9_.-]+"
+				/>
+				<Field
+					ref={titleRef}
+					id="instrument-title"
+					name="title"
+					label="Título"
+					value={title}
+					onChange={(event) => {
+						setTitle(event.target.value);
+						if (fieldErrors.title) {
+							setFieldErrors((current) => ({ ...current, title: undefined }));
+						}
+					}}
+					error={fieldErrors.title}
+					required
+				/>
+				<Field
+					id="instrument-description"
+					name="description"
+					label="Descripción"
+					control="textarea"
+					value={description}
+					onChange={(event) => setDescription(event.target.value)}
+					helperText="Opcional. Describa el propósito de investigación de este instrumento."
+					rows={4}
+				/>
+				<div className={styles.actions}>
+					<Button type="submit" busy={busy} pendingLabel="Creando…">
+						Crear instrumento
+					</Button>
+					<Button
 						type="button"
+						variant="secondary"
 						onClick={() => router.push("/catalogo")}
-						style={{ padding: "0.6rem", cursor: "pointer" }}
 					>
 						Cancelar
-					</button>
+					</Button>
 				</div>
 			</form>
-			<p style={{ color: "#666", fontSize: "0.9rem" }}>
-				El instrumento semilla de referencia (TP-S-01) no aparece como base: el
-				contenido semilla es de solo lectura.
-			</p>
-		</main>
+		</div>
 	);
 }

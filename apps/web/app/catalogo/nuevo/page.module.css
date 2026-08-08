@@ -1,0 +1,58 @@
+.page {
+	display: grid;
+	gap: var(--space-8);
+	width: min(100%, 48rem);
+	margin: 0 auto;
+	padding: var(--space-8) var(--space-4) var(--space-12);
+}
+
+.header,
+.form {
+	display: grid;
+	gap: var(--space-4);
+}
+
+.header {
+	padding-bottom: var(--space-5);
+	border-bottom: 1px solid var(--color-border);
+}
+
+.eyebrow {
+	color: var(--color-accent);
+	font-size: var(--font-size-caption);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.header h1 {
+	font-size: clamp(2rem, 1.7rem + 1vw, 2.75rem);
+	letter-spacing: -0.03em;
+}
+
+.header p:last-child {
+	color: var(--color-ink-2);
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-3);
+	padding-top: var(--space-3);
+}
+
+@media (min-width: 48rem) {
+	.page {
+		padding-inline: var(--space-8);
+	}
+}
+
+@media (max-width: 30rem) {
+	.actions {
+		flex-direction: column;
+	}
+
+	.actions > * {
+		width: 100%;
+	}
+}

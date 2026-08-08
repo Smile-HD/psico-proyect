@@ -38,6 +38,9 @@ class Settings(BaseSettings):
 
     audit_retention_days: int = 365
     log_level: str = "INFO"
+    # Exact origin of the Next.js web app, for CORS (browser calls to the
+    # API). Credentials are allowed, so this must not be a wildcard.
+    web_origin: str = "http://localhost:3000"
 
     @property
     def using_dev_defaults(self) -> bool:

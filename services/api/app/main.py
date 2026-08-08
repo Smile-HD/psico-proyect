@@ -11,8 +11,9 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.router import api_router
@@ -43,7 +44,21 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="TestPsico API", version="0.1.0", lifespan=lifespan)
 
-app.add_middleware(RequestIDMiddleware)
+# FastAPI's official middleware pattern; pyright cannot assign Starlette
+# middleware classes to _MiddlewareFactory, hence the ignores.
+app.add_middleware(RequestIDMiddleware)  # type: ignore[arg-type]
+
+# Browser (Next.js web) calls the API directly from localhost:3000, so the
+# preflight must be answered for the exact web origin. The token travels in the
+# Authorization header (not cookies), but credentials stay enabled to keep the
+# allow-list explicit instead of a wildcard.
+app.add_middleware(
+    CORSMiddleware,  # type: ignore[arg-type]
+    allow_origins=[settings.web_origin],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.add_exception_handler(ApiError, api_error_handler)
 app.add_exception_handler(StarletteHTTPException, http_error_handler)

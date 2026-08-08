@@ -52,8 +52,12 @@ export default function CatalogListPage() {
 		user?.roles.includes("admin") || user?.roles.includes("psicologo");
 
 	useEffect(() => {
+		if (!user) {
+			router.replace("/login");
+			return;
+		}
 		if (!canManage) {
-			router.replace("/");
+			setError("No tiene permisos para administrar el catálogo.");
 			return;
 		}
 		let cancelled = false;

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import NavBar from "@/components/NavBar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,19 +16,8 @@ export default function RootLayout({
 	return (
 		<html lang="es">
 			<body>
-				<nav
-					style={{
-						fontFamily: "system-ui, sans-serif",
-						padding: "0.5rem 1rem",
-						borderBottom: "1px solid #eee",
-					}}
-				>
-					<Link href="/" style={{ marginRight: "1rem" }}>
-						Estado del servicio
-					</Link>
-					<Link href="/catalogo">Catálogo de instrumentos</Link>
-				</nav>
-				{children}
+			<NavBar />
+			{children}
 			</body>
 		</html>
 	);

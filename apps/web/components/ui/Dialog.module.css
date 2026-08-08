@@ -1,0 +1,52 @@
+.overlay {
+	position: fixed;
+	z-index: var(--z-overlay);
+	inset: 0;
+	display: grid;
+	place-items: center;
+	padding: var(--space-4);
+	background: color-mix(in srgb, var(--color-ink-1) 52%, transparent);
+}
+
+.panel {
+	position: relative;
+	z-index: var(--z-dialog);
+	width: min(100%, 36rem);
+	max-height: calc(100dvh - (2 * var(--space-8)));
+	overflow-y: auto;
+	padding: var(--space-6);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+	background: var(--color-surface);
+	box-shadow: var(--shadow-subtle);
+}
+
+.header {
+	margin-bottom: var(--space-3);
+}
+
+.header h2 {
+	font-size: var(--font-size-heading-2);
+}
+
+.description {
+	color: var(--color-ink-2);
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--space-2);
+	margin-top: var(--space-6);
+}
+
+@media (max-width: 30rem) {
+	.panel {
+		align-self: end;
+		max-height: calc(100dvh - var(--space-4));
+		padding: var(--space-4);
+		border-bottom-right-radius: 0;
+		border-bottom-left-radius: 0;
+	}
+}

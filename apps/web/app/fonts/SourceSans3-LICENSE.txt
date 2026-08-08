@@ -1,0 +1,13 @@
+Source Sans 3
+=============
+
+Source Sans 3 is the typeface used by TestPsico and is distributed under the
+SIL Open Font License, Version 1.1.
+
+Copyright 2020 Adobe. All rights reserved.
+
+The font source and license are available at:
+https://github.com/adobe-fonts/source-sans
+https://scripts.sil.org/OFL
+
+This repository vendors the Latin variable WOFF2 subset for offline builds.

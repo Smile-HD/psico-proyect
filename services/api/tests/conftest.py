@@ -13,7 +13,7 @@ from alembic.config import Config
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from tests.db_utils import SKIP_MESSAGE, db_reachable, db_url
+from tests.db_utils import SKIP_MESSAGE, db_reachable, db_url, reset_database
 
 
 def alembic_config(url: str) -> Config:
@@ -27,6 +27,7 @@ def engine():
     url = db_url()
     if not db_reachable(url):
         pytest.skip(SKIP_MESSAGE)
+    reset_database(url)
     command.upgrade(alembic_config(url), "head")
     eng = create_engine(url, pool_pre_ping=True)
     yield eng

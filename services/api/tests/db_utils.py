@@ -41,3 +41,26 @@ def maintenance_url(url: str) -> str:
     """Same server URL but connected to the `postgres` maintenance database."""
     base, _, _ = url.rpartition("/")
     return f"{base}/postgres"
+
+
+def reset_database(url: str) -> None:
+    """Drop and recreate the target database for a repeatable test run.
+
+    F2 idempotency records persist across runs; tests use fixed keys, so a
+    second run would replay stale records against old resources. Resetting
+    the database makes the whole suite repeatable (CI-style fresh state).
+    Only databases whose name starts with `psico` are touched, so an
+    accidentally misconfigured URL can never drop unrelated data.
+    """
+    base, _, dbname = url.rpartition("/")
+    if not dbname or not dbname.startswith("psico"):
+        return
+    # Name is allowlisted (prefix check above); only safe characters can reach
+    # the DDL, so interpolation is confined to a psico*_test-style identifier.
+    if not dbname.replace("_", "").isalnum():
+        return
+    maint = create_engine(maintenance_url(url), isolation_level="AUTOCOMMIT")
+    with maint.connect() as conn:
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{dbname}" WITH (FORCE)'))
+        conn.execute(text(f'CREATE DATABASE "{dbname}"'))
+    maint.dispose()

@@ -152,10 +152,9 @@ export default function VersionEditorPage() {
 			return;
 		}
 		let cancelled = false;
-		apiFetch<ApiDetail>(
-			`/api/v1/catalog/admin/versions/${params.versionId}`,
-			{ token: localStorage.getItem("psico_token") ?? "" },
-		)
+		apiFetch<ApiDetail>(`/api/v1/catalog/admin/versions/${params.versionId}`, {
+			token: localStorage.getItem("psico_token") ?? "",
+		})
 			.then((data) => {
 				if (!cancelled) setDetail(toDraft(data));
 			})

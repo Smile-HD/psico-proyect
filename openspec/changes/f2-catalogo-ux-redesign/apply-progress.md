@@ -215,3 +215,12 @@ Strict TDD is enabled repository-wide, but the web package has no test runner an
 - Parent lifecycle owns bounded review, delivery, verification, and archive. No receipt was created or approved and no commit was made.
 - The exact current unchecked task lines remain above under `Remaining unchecked tasks`; they begin at T3.1 and include T3/T4/V plus the two parent rows.
 
+
+## Slice 3 (PR 3) — pages and route states (T3.1–T3.8)
+
+- Home, login, catalog list, new-instrument form, and version editor migrated to the ui/ primitives (StatusLabel, Field, Table, Skeleton, EmptyState, ErrorState, Pagination, Breadcrumb, Dialog, Button busy); no `window.confirm`/`alert()` remain.
+- LikertMatrix component created and integrated into the evaluator preview (item×option matrix with column headings, required markers, inner overflow).
+- Route surfaces added: root `loading.tsx`/`error.tsx`/`not-found.tsx` + loading/error per route (login, catalogo, nuevo, editor, vista) with layout-matched Skeleton and ErrorState retry.
+- Gate: `npm run build` PASS; scope check: `lib/api.ts`, `lib/auth.ts`, `services/api/**` untouched.
+- The apply subagent timed out after implementing T3.1–T3.6; the parent completed the vista migration (T3.6 integration), created the missing route surfaces (T3.7), fixed relative CSS module paths, and ran the layer-3 gate (T3.8).
+- Remaining: interactive browser smoke checklist (anonymous/admin/psicologo/evaluado) is manual, per design §6 Layer 3.

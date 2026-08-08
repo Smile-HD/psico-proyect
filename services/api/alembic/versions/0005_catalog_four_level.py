@@ -49,11 +49,17 @@ def _create_catalog_tables() -> None:
         sa.Column("label", sa.String(length=255), nullable=False),
         sa.Column("locale", sa.String(length=10), server_default="es", nullable=False),
         sa.Column("display_order", sa.Integer(), nullable=False),
-        sa.Column("synthetic", sa.Boolean(), server_default=sa.text("false"), nullable=False),
-        sa.Column("source", sa.String(length=32), server_default="runtime", nullable=False),
+        sa.Column(
+            "synthetic", sa.Boolean(), server_default=sa.text("false"), nullable=False
+        ),
+        sa.Column(
+            "source", sa.String(length=32), server_default="runtime", nullable=False
+        ),
         sa.ForeignKeyConstraint(["version_id"], ["instrument_versions.id"]),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("version_id", "display_order", name="uq_scales_version_order"),
+        sa.UniqueConstraint(
+            "version_id", "display_order", name="uq_scales_version_order"
+        ),
         sa.UniqueConstraint("id", "version_id", name="uq_scales_id_version"),
         sa.CheckConstraint("display_order > 0", name="ck_scale_display_order_positive"),
     )
@@ -67,8 +73,12 @@ def _create_catalog_tables() -> None:
         sa.Column("locale", sa.String(length=10), server_default="es", nullable=False),
         sa.Column("display_order", sa.Integer(), nullable=False),
         sa.Column("value", sa.Integer(), nullable=False),
-        sa.Column("synthetic", sa.Boolean(), server_default=sa.text("false"), nullable=False),
-        sa.Column("source", sa.String(length=32), server_default="runtime", nullable=False),
+        sa.Column(
+            "synthetic", sa.Boolean(), server_default=sa.text("false"), nullable=False
+        ),
+        sa.Column(
+            "source", sa.String(length=32), server_default="runtime", nullable=False
+        ),
         sa.ForeignKeyConstraint(["item_id"], ["instrument_items.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("item_id", "display_order", name="uq_option_item_order"),
@@ -78,7 +88,9 @@ def _create_catalog_tables() -> None:
         ),
         sa.CheckConstraint("value BETWEEN 1 AND 5", name="ck_option_value_1_to_5"),
     )
-    op.create_index("ix_response_options_item_id", "response_options", ["item_id"], unique=False)
+    op.create_index(
+        "ix_response_options_item_id", "response_options", ["item_id"], unique=False
+    )
 
     op.create_table(
         "idempotency_records",
@@ -90,7 +102,12 @@ def _create_catalog_tables() -> None:
         sa.Column("request_hash", sa.String(length=64), nullable=False),
         sa.Column("response_status", sa.SmallInteger(), nullable=False),
         sa.Column("response_body", postgresql.JSONB(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
@@ -112,7 +129,12 @@ def _create_catalog_tables() -> None:
 def _add_version_and_item_columns() -> None:
     op.add_column(
         "instrument_versions",
-        sa.Column("response_type", sa.String(length=32), server_default="likert_1_5", nullable=True),
+        sa.Column(
+            "response_type",
+            sa.String(length=32),
+            server_default="likert_1_5",
+            nullable=True,
+        ),
     )
     op.add_column(
         "instrument_versions",
@@ -120,11 +142,21 @@ def _add_version_and_item_columns() -> None:
     )
     op.add_column(
         "instrument_versions",
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=True,
+        ),
     )
     op.add_column(
         "instrument_versions",
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=True,
+        ),
     )
     op.add_column(
         "instrument_versions",
@@ -150,7 +182,9 @@ def _add_version_and_item_columns() -> None:
             "WHERE status NOT IN ('draft', 'published', 'archived')"
         )
     ).all()
-    op.drop_constraint("ck_published_versions_immutable", "instrument_versions", type_="check")
+    op.drop_constraint(
+        "ck_published_versions_immutable", "instrument_versions", type_="check"
+    )
     op.create_check_constraint(
         "ck_instrument_version_status",
         "instrument_versions",
@@ -164,28 +198,42 @@ def _add_version_and_item_columns() -> None:
     )
 
     op.add_column("instrument_items", sa.Column("scale_id", sa.Uuid(), nullable=True))
-    op.add_column("instrument_items", sa.Column("item_order", sa.Integer(), nullable=True))
-    op.add_column("instrument_items", sa.Column("locale", sa.String(length=10), nullable=True))
-    op.add_column("instrument_items", sa.Column("required", sa.Boolean(), nullable=True))
+    op.add_column(
+        "instrument_items", sa.Column("item_order", sa.Integer(), nullable=True)
+    )
+    op.add_column(
+        "instrument_items", sa.Column("locale", sa.String(length=10), nullable=True)
+    )
+    op.add_column(
+        "instrument_items", sa.Column("required", sa.Boolean(), nullable=True)
+    )
 
 
 def _backfill_catalog_graph() -> None:
     connection = op.get_bind()
-    versions = connection.execute(
-        sa.text(
-            "SELECT iv.id, iv.instrument_id, iv.source AS version_source, "
-            "i.key AS instrument_key, i.source AS instrument_source "
-            "FROM instrument_versions iv JOIN instruments i ON i.id = iv.instrument_id"
+    versions = (
+        connection.execute(
+            sa.text(
+                "SELECT iv.id, iv.instrument_id, iv.source AS version_source, "
+                "i.key AS instrument_key, i.source AS instrument_source "
+                "FROM instrument_versions iv JOIN instruments i ON i.id = iv.instrument_id"
+            )
         )
-    ).mappings().all()
+        .mappings()
+        .all()
+    )
     version_info = {row["id"]: row for row in versions}
 
-    item_rows = connection.execute(
-        sa.text(
-            "SELECT id, version_id, scale, scale_order, synthetic, source "
-            "FROM instrument_items ORDER BY version_id, scale_order, id"
+    item_rows = (
+        connection.execute(
+            sa.text(
+                "SELECT id, version_id, scale, scale_order, synthetic, source "
+                "FROM instrument_items ORDER BY version_id, scale_order, id"
+            )
         )
-    ).mappings().all()
+        .mappings()
+        .all()
+    )
 
     groups: dict[tuple[uuid.UUID, str], list[dict]] = {}
     for row in item_rows:
@@ -195,9 +243,7 @@ def _backfill_catalog_graph() -> None:
     nonseed_orders: dict[tuple[uuid.UUID, str], int] = {}
     for version_id in version_info:
         version_groups = [
-            (key, rows)
-            for key, rows in groups.items()
-            if key[0] == version_id
+            (key, rows) for key, rows in groups.items() if key[0] == version_id
         ]
         version_groups.sort(
             key=lambda pair: (
@@ -242,9 +288,7 @@ def _backfill_catalog_graph() -> None:
         )
         scale_ids[(version_id, scale_label)] = scale_id
 
-    seed_item_ids = {
-        _seed_id(f"TP-S-01:i{index}"): index for index in range(1, 21)
-    }
+    seed_item_ids = {_seed_id(f"TP-S-01:i{index}"): index for index in range(1, 21)}
     for row in item_rows:
         version_id = row["version_id"]
         info = version_info[version_id]
@@ -329,7 +373,9 @@ def _finalize_item_columns() -> None:
         ["scale_id", "version_id"],
         ["id", "version_id"],
     )
-    op.create_index("ix_instrument_items_scale_id", "instrument_items", ["scale_id"], unique=False)
+    op.create_index(
+        "ix_instrument_items_scale_id", "instrument_items", ["scale_id"], unique=False
+    )
     op.drop_column("instrument_items", "scale_order")
     op.drop_column("instrument_items", "scale")
 
@@ -449,7 +495,9 @@ def upgrade() -> None:
         )
     ).all()
     if invalid_statuses:
-        raise RuntimeError(f"unsupported instrument version statuses: {invalid_statuses}")
+        raise RuntimeError(
+            f"unsupported instrument version statuses: {invalid_statuses}"
+        )
 
     _create_catalog_tables()
     _add_version_and_item_columns()
@@ -459,21 +507,33 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("DROP TRIGGER IF EXISTS trg_catalog_option_immutability ON response_options")
-    op.execute("DROP TRIGGER IF EXISTS trg_catalog_item_immutability ON instrument_items")
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_catalog_option_immutability ON response_options"
+    )
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_catalog_item_immutability ON instrument_items"
+    )
     op.execute("DROP TRIGGER IF EXISTS trg_catalog_scale_immutability ON scales")
-    op.execute("DROP TRIGGER IF EXISTS trg_catalog_version_immutability ON instrument_versions")
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_catalog_version_immutability ON instrument_versions"
+    )
     op.execute("DROP FUNCTION IF EXISTS catalog_option_immutability_guard()")
     op.execute("DROP FUNCTION IF EXISTS catalog_item_immutability_guard()")
     op.execute("DROP FUNCTION IF EXISTS catalog_scale_immutability_guard()")
     op.execute("DROP FUNCTION IF EXISTS catalog_version_immutability_guard()")
 
-    op.drop_constraint("fk_instrument_items_scale_version", "instrument_items", type_="foreignkey")
+    op.drop_constraint(
+        "fk_instrument_items_scale_version", "instrument_items", type_="foreignkey"
+    )
     op.drop_constraint("uq_item_per_scale_order", "instrument_items", type_="unique")
     op.drop_constraint("ck_item_order_positive", "instrument_items", type_="check")
     op.drop_index("ix_instrument_items_scale_id", table_name="instrument_items")
-    op.add_column("instrument_items", sa.Column("scale", sa.String(length=64), nullable=True))
-    op.add_column("instrument_items", sa.Column("scale_order", sa.Integer(), nullable=True))
+    op.add_column(
+        "instrument_items", sa.Column("scale", sa.String(length=64), nullable=True)
+    )
+    op.add_column(
+        "instrument_items", sa.Column("scale_order", sa.Integer(), nullable=True)
+    )
     op.execute(
         """
         UPDATE instrument_items ii
@@ -494,19 +554,31 @@ def downgrade() -> None:
     op.drop_column("instrument_items", "item_order")
     op.drop_column("instrument_items", "scale_id")
 
-    op.drop_index("ix_idempotency_records_actor_user_id", table_name="idempotency_records")
+    op.drop_index(
+        "ix_idempotency_records_actor_user_id", table_name="idempotency_records"
+    )
     op.drop_table("idempotency_records")
     op.drop_index("ix_response_options_item_id", table_name="response_options")
     op.drop_table("response_options")
     op.drop_index("ix_scales_version_id", table_name="scales")
     op.drop_table("scales")
 
-    op.drop_constraint("ck_instrument_version_status", "instrument_versions", type_="check")
-    op.drop_constraint("ck_published_versions_immutable", "instrument_versions", type_="check")
+    op.drop_constraint(
+        "ck_instrument_version_status", "instrument_versions", type_="check"
+    )
+    op.drop_constraint(
+        "ck_published_versions_immutable", "instrument_versions", type_="check"
+    )
     op.create_check_constraint(
         "ck_published_versions_immutable",
         "instrument_versions",
         "(status <> 'published') OR is_immutable",
     )
-    for column in ("archived_at", "updated_at", "created_at", "adaptation_metadata", "response_type"):
+    for column in (
+        "archived_at",
+        "updated_at",
+        "created_at",
+        "adaptation_metadata",
+        "response_type",
+    ):
         op.drop_column("instrument_versions", column)

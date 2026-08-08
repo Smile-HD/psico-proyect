@@ -21,7 +21,10 @@ EVENT_CATALOG = {
     "auth.login",
     "auth.denied",
     "user.role_changed",
+    "instrument.draft_created",
+    "instrument.draft_updated",
     "instrument.published",
+    "instrument.archived",
     "consent.granted",
     "consent.revoked",
     "session.started",
@@ -56,7 +59,9 @@ def assert_deny_list(metadata: dict | None) -> None:
         for banned in DENY_LIST:
             if banned in key_low:
                 raise ValueError(f"deny-list violation on metadata key: {key!r}")
-        if isinstance(value, str) and any(banned in value.lower() for banned in DENY_LIST):
+        if isinstance(value, str) and any(
+            banned in value.lower() for banned in DENY_LIST
+        ):
             raise ValueError(f"deny-list violation in metadata value of {key!r}")
 
 

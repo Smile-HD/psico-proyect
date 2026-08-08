@@ -43,7 +43,9 @@ class Instrument(Base, SyntheticMixin):
 class InstrumentVersion(Base, SyntheticMixin):
     __tablename__ = "instrument_versions"
     __table_args__ = (
-        UniqueConstraint("instrument_id", "version_no", name="uq_version_no_per_instrument"),
+        UniqueConstraint(
+            "instrument_id", "version_no", name="uq_version_no_per_instrument"
+        ),
         CheckConstraint(
             "status IN ('draft', 'published', 'archived')",
             name="ck_instrument_version_status",
@@ -69,7 +71,10 @@ class InstrumentVersion(Base, SyntheticMixin):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
     )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -137,9 +142,7 @@ class InstrumentItem(Base, SyntheticMixin):
     version: Mapped[InstrumentVersion] = relationship(
         back_populates="items", foreign_keys=[version_id]
     )
-    scale: Mapped[Scale] = relationship(
-        back_populates="items", foreign_keys=[scale_id]
-    )
+    scale: Mapped[Scale] = relationship(back_populates="items", foreign_keys=[scale_id])
     response_options: Mapped[list["ResponseOption"]] = relationship(
         back_populates="item", order_by="ResponseOption.display_order"
     )

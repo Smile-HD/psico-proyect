@@ -8,7 +8,7 @@ codes, seed manifest schema) are **English**; human-facing UI texts are
 ## 1. Identifier convention
 
 | Data kind | Format | Namespace / rule |
-|---|---|---|
+| --- | --- | --- |
 | Runtime rows (sessions, grants, audit, …) | **UUID4** | Any non-seed row created by the application |
 | Seed rows | **UUID5** | `uuid5(NAMESPACE_URL, "psico-seed:" + key)` |
 
@@ -20,7 +20,7 @@ codes, seed manifest schema) are **English**; human-facing UI texts are
 ### Stable seed keys (pinned)
 
 | Key | Row |
-|---|---|
+| --- | --- |
 | `evaluado_01` … `evaluado_30` | profile users, their sessions, responses, consent grants |
 | `TP-S-01` | synthetic instrument (20 items, version 1 immutable) |
 | `RS-TP-S-01` | invented reference set (research-only) |
@@ -49,7 +49,7 @@ Every API error returns exactly:
 - Codes MUST be one of:
 
   | Code | Meaning |
-  |---|---|
+  | --- | --- |
   | `VALIDATION_ERROR` | request payload invalid |
   | `UNAUTHORIZED` | missing/invalid credentials |
   | `FORBIDDEN` | authenticated but not allowed |
@@ -70,10 +70,10 @@ Every API error returns exactly:
 - tokens, passwords, or secrets
 - instrument item content
 
-Event catalog (F1): `auth.login`, `auth.denied`, `user.role_changed`,
-`instrument.published`, `consent.granted`, `consent.revoked`,
-`session.started`, `session.completed`, `session.blocked_without_consent`,
-`seed.executed`.
+Event catalog: `auth.login`, `auth.denied`, `user.role_changed`,
+`instrument.draft_created`, `instrument.draft_updated`, `instrument.published`,
+`instrument.archived`, `consent.granted`, `consent.revoked`, `session.started`,
+`session.completed`, `session.blocked_without_consent`, `seed.executed`.
 
 `audit_log` is append-only: a DB trigger rejects `UPDATE`/`DELETE`; the app
 role holds only `INSERT` + `SELECT` on it.
@@ -83,7 +83,7 @@ role holds only `INSERT` + `SELECT` on it.
 `seed_manifest` records one row per seed run:
 
 | Field | Type | Meaning |
-|---|---|---|
+| --- | --- | --- |
 | `seed_version` | string | e.g. `1.0.0` |
 | `counts` | JSONB | per-table seeded row counts |
 | `checksum` | string | `sha256` over the fixture files (sorted paths, concatenated bytes) |
@@ -100,7 +100,7 @@ Every row in the institutional hierarchy carries `institution_id` (FK to
 campus/faculty/program so every later phase can join through the same root.
 
 | Entity | Table | Key fields |
-|---|---|---|
+| --- | --- | --- |
 | Institution | `institutions` | `id`, `name`, `synthetic`, `source` |
 | Campus | `campuses` | `id`, `institution_id`, `name`, `synthetic`, `source` |
 | Faculty | `faculties` | `id`, `institution_id`, `name`, `synthetic`, `source` |
@@ -118,9 +118,10 @@ Every protected route MUST declare `require_roles(...)`; there is no
 default-allow. See `services/api/app/core/permissions.py` (source of truth):
 
 | Capability | admin | psicólogo | evaluado |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Manage users/roles | ✅ | ❌ | ❌ |
 | Manage institutions | ✅ | ❌ | ❌ |
+| Manage instruments (drafts, archive) | ✅ | ✅ | ❌ |
 | Publish instrument versions | ✅ | ❌ | ❌ |
 | Read published catalog | ✅ | ✅ | ✅ (own) |
 | Run sessions | ✅ | ✅ | ✅ (own) |

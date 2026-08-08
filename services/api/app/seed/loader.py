@@ -110,7 +110,9 @@ def _load_json(name: str) -> dict:
     return json.loads((FIXTURES_DIR / name).read_text(encoding="utf-8"))
 
 
-def _upsert(db: Session, model, row: dict, conflict_cols: list[str] | None = None) -> None:
+def _upsert(
+    db: Session, model, row: dict, conflict_cols: list[str] | None = None
+) -> None:
     stmt = (
         pg_insert(model)
         .values(**row)
@@ -123,18 +125,51 @@ def _seed_rows(db: Session) -> None:
     """Insert all seed-owned rows (FK order). Idempotent by deterministic id."""
     # --- roles -------------------------------------------------------------
     role_rows = [
-        {"id": seed_id("role:admin"), "name": "admin", "description": "Administrador del sistema (desarrollo)", "synthetic": True, "source": "seed"},
-        {"id": seed_id("role:psicologo"), "name": "psicólogo", "description": "Psicólogo/a — aplica sesiones y revisa resultados (desarrollo)", "synthetic": True, "source": "seed"},
-        {"id": seed_id("role:evaluado"), "name": "evaluado", "description": "Evaluado/a — participante sintético (desarrollo)", "synthetic": True, "source": "seed"},
+        {
+            "id": seed_id("role:admin"),
+            "name": "admin",
+            "description": "Administrador del sistema (desarrollo)",
+            "synthetic": True,
+            "source": "seed",
+        },
+        {
+            "id": seed_id("role:psicologo"),
+            "name": "psicólogo",
+            "description": "Psicólogo/a — aplica sesiones y revisa resultados (desarrollo)",
+            "synthetic": True,
+            "source": "seed",
+        },
+        {
+            "id": seed_id("role:evaluado"),
+            "name": "evaluado",
+            "description": "Evaluado/a — participante sintético (desarrollo)",
+            "synthetic": True,
+            "source": "seed",
+        },
     ]
     for row in role_rows:
         _upsert(db, Role, row)
 
     # --- users (3 dev accounts + 30 profiles) -------------------------------
     dev_users = [
-        ("admin", settings.dev_password_admin, "Cuenta de desarrollo — Administrador", "role:admin"),
-        ("psicologo", settings.dev_password_psicologo, "Cuenta de desarrollo — Psicólogo", "role:psicologo"),
-        ("evaluado", settings.dev_password_evaluado, "Cuenta de desarrollo — Evaluado", "role:evaluado"),
+        (
+            "admin",
+            settings.dev_password_admin,
+            "Cuenta de desarrollo — Administrador",
+            "role:admin",
+        ),
+        (
+            "psicologo",
+            settings.dev_password_psicologo,
+            "Cuenta de desarrollo — Psicólogo",
+            "role:psicologo",
+        ),
+        (
+            "evaluado",
+            settings.dev_password_evaluado,
+            "Cuenta de desarrollo — Evaluado",
+            "role:evaluado",
+        ),
     ]
     profiles = []
     for profile_file in sorted((FIXTURES_DIR / "profiles").glob("*.json")):
@@ -142,143 +177,233 @@ def _seed_rows(db: Session) -> None:
 
     user_rows: list[dict] = []
     for username, password, full_name, role_key in dev_users:
-        user_rows.append({
-            "id": seed_id(f"user:{username}"),
-            "username": username,
-            "password_hash": hash_password(password),
-            "full_name": full_name,
-            "email": f"{username}@psico.test",
-            "is_active": True,
-            "synthetic": True,
-            "source": "seed",
-        })
+        user_rows.append(
+            {
+                "id": seed_id(f"user:{username}"),
+                "username": username,
+                "password_hash": hash_password(password),
+                "full_name": full_name,
+                "email": f"{username}@psico.test",
+                "is_active": True,
+                "synthetic": True,
+                "source": "seed",
+            }
+        )
     for profile in profiles:
-        user_rows.append({
-            "id": seed_id(profile["key"]),
-            "username": profile["key"],
-            "password_hash": hash_password(f"psico-seed-{profile['key']}"),
-            "full_name": profile["name"],
-            "email": f"{profile['key']}@psico.test",
-            "is_active": True,
-            "synthetic": True,
-            "source": "seed",
-        })
+        user_rows.append(
+            {
+                "id": seed_id(profile["key"]),
+                "username": profile["key"],
+                "password_hash": hash_password(f"psico-seed-{profile['key']}"),
+                "full_name": profile["name"],
+                "email": f"{profile['key']}@psico.test",
+                "is_active": True,
+                "synthetic": True,
+                "source": "seed",
+            }
+        )
     for row in user_rows:
         _upsert(db, User, row)
 
     # --- user_roles ----------------------------------------------------------
     for username, _pw, _fn, role_key in dev_users:
-        _upsert(db, UserRole, {
-            "user_id": seed_id(f"user:{username}"),
-            "role_id": seed_id(role_key),
-            "synthetic": True,
-            "source": "seed",
-        }, conflict_cols=["user_id", "role_id"])
+        _upsert(
+            db,
+            UserRole,
+            {
+                "user_id": seed_id(f"user:{username}"),
+                "role_id": seed_id(role_key),
+                "synthetic": True,
+                "source": "seed",
+            },
+            conflict_cols=["user_id", "role_id"],
+        )
     for profile in profiles:
-        _upsert(db, UserRole, {
-            "user_id": seed_id(profile["key"]),
-            "role_id": seed_id("role:evaluado"),
-            "synthetic": True,
-            "source": "seed",
-        }, conflict_cols=["user_id", "role_id"])
+        _upsert(
+            db,
+            UserRole,
+            {
+                "user_id": seed_id(profile["key"]),
+                "role_id": seed_id("role:evaluado"),
+                "synthetic": True,
+                "source": "seed",
+            },
+            conflict_cols=["user_id", "role_id"],
+        )
 
     # --- institutions (1 synthetic institution, no real UAGRM data) ----------
     inst_id = seed_id("institution:dev")
-    _upsert(db, Institution, {
-        "id": inst_id, "name": "Institución Sintética de Desarrollo",
-        "code": "ISD-001", "synthetic": True, "source": "seed",
-    })
+    _upsert(
+        db,
+        Institution,
+        {
+            "id": inst_id,
+            "name": "Institución Sintética de Desarrollo",
+            "code": "ISD-001",
+            "synthetic": True,
+            "source": "seed",
+        },
+    )
     campus_id = seed_id("campus:dev")
-    _upsert(db, Campus, {
-        "id": campus_id, "institution_id": inst_id, "name": "Campus Sintético",
-        "code": "CS-001", "synthetic": True, "source": "seed",
-    })
+    _upsert(
+        db,
+        Campus,
+        {
+            "id": campus_id,
+            "institution_id": inst_id,
+            "name": "Campus Sintético",
+            "code": "CS-001",
+            "synthetic": True,
+            "source": "seed",
+        },
+    )
     faculty_id = seed_id("faculty:dev")
-    _upsert(db, Faculty, {
-        "id": faculty_id, "institution_id": inst_id, "campus_id": campus_id,
-        "name": "Facultad Sintética de Ciencias", "code": "FS-001",
-        "synthetic": True, "source": "seed",
-    })
+    _upsert(
+        db,
+        Faculty,
+        {
+            "id": faculty_id,
+            "institution_id": inst_id,
+            "campus_id": campus_id,
+            "name": "Facultad Sintética de Ciencias",
+            "code": "FS-001",
+            "synthetic": True,
+            "source": "seed",
+        },
+    )
     program_id = seed_id("program:dev")
-    _upsert(db, Program, {
-        "id": program_id, "institution_id": inst_id, "faculty_id": faculty_id,
-        "name": "Programa Sintético de Orientación", "code": "PS-001",
-        "synthetic": True, "source": "seed",
-    })
+    _upsert(
+        db,
+        Program,
+        {
+            "id": program_id,
+            "institution_id": inst_id,
+            "faculty_id": faculty_id,
+            "name": "Programa Sintético de Orientación",
+            "code": "PS-001",
+            "synthetic": True,
+            "source": "seed",
+        },
+    )
 
     # --- instrument TP-S-01 (20 items, version 1, published + immutable) ------
     items = _load_json("items.json")
     instrument_id = seed_id(items["key"])  # contract key TP-S-01
-    _upsert(db, Instrument, {
-        "id": instrument_id, "key": items["key"], "title": items["title"],
-        "description": items["description"], "synthetic": True, "source": "seed",
-    })
+    _upsert(
+        db,
+        Instrument,
+        {
+            "id": instrument_id,
+            "key": items["key"],
+            "title": items["title"],
+            "description": items["description"],
+            "synthetic": True,
+            "source": "seed",
+        },
+    )
     version_id = seed_id("TP-S-01:v1")
-    _upsert(db, InstrumentVersion, {
-        "id": version_id, "instrument_id": instrument_id,
-        "version_no": items["version_no"], "status": items["status"],
-        "response_type": "likert_1_5",
-        "published_at": datetime(2026, 1, 1, tzinfo=timezone.utc),
-        "is_immutable": True, "synthetic": True, "source": "seed",
-    })
+    _upsert(
+        db,
+        InstrumentVersion,
+        {
+            "id": version_id,
+            "instrument_id": instrument_id,
+            "version_no": items["version_no"],
+            "status": items["status"],
+            "response_type": "likert_1_5",
+            "published_at": datetime(2026, 1, 1, tzinfo=timezone.utc),
+            "is_immutable": True,
+            "synthetic": True,
+            "source": "seed",
+        },
+    )
     flat_items: list[tuple[str, int, str, uuid.UUID]] = []
     for display_order, scale in enumerate(items["scales"], start=1):
         scale_id = seed_id(f"TP-S-01:scale:{scale['scale']}")
-        _upsert(db, Scale, {
-            "id": scale_id,
-            "version_id": version_id,
-            "label": scale["scale"],
-            "locale": "es",
-            "display_order": display_order,
-            "synthetic": True,
-            "source": "seed",
-        })
+        _upsert(
+            db,
+            Scale,
+            {
+                "id": scale_id,
+                "version_id": version_id,
+                "label": scale["scale"],
+                "locale": "es",
+                "display_order": display_order,
+                "synthetic": True,
+                "source": "seed",
+            },
+        )
         for item in scale["items"]:
             flat_items.append((scale["scale"], item["order"], item["text"], scale_id))
     for index, (scale, order, item_text, scale_id) in enumerate(flat_items, start=1):
         item_id = seed_id(f"TP-S-01:i{index}")
-        _upsert(db, InstrumentItem, {
-            "id": item_id,
-            "version_id": version_id,
-            "scale_id": scale_id,
-            "item_order": order,
-            "locale": "es",
-            "required": True,
-            "text": item_text,
-            "synthetic": True,
-            "source": "seed",
-        })
-        for value, label in enumerate(SEED_OPTION_LABELS, start=1):
-            _upsert(db, ResponseOption, {
-                "id": seed_id(f"TP-S-01:i{index}:option:{value}"),
-                "item_id": item_id,
-                "label": label,
+        _upsert(
+            db,
+            InstrumentItem,
+            {
+                "id": item_id,
+                "version_id": version_id,
+                "scale_id": scale_id,
+                "item_order": order,
                 "locale": "es",
-                "display_order": value,
-                "value": value,
+                "required": True,
+                "text": item_text,
                 "synthetic": True,
                 "source": "seed",
-            })
+            },
+        )
+        for value, label in enumerate(SEED_OPTION_LABELS, start=1):
+            _upsert(
+                db,
+                ResponseOption,
+                {
+                    "id": seed_id(f"TP-S-01:i{index}:option:{value}"),
+                    "item_id": item_id,
+                    "label": label,
+                    "locale": "es",
+                    "display_order": value,
+                    "value": value,
+                    "synthetic": True,
+                    "source": "seed",
+                },
+            )
 
     # --- reference set RS-TP-S-01 (synthetic / research-only) ------------------
     reference = _load_json("reference.json")
     ref_id = seed_id(reference["key"])  # contract key RS-TP-S-01
-    _upsert(db, ReferenceSet, {
-        "id": ref_id, "key": reference["key"], "instrument_version_id": version_id,
-        "reference_status": reference["reference_status"], "use": reference["use"],
-        "norm_note": reference["norm_note"], "synthetic": True, "source": "seed",
-    })
+    _upsert(
+        db,
+        ReferenceSet,
+        {
+            "id": ref_id,
+            "key": reference["key"],
+            "instrument_version_id": version_id,
+            "reference_status": reference["reference_status"],
+            "use": reference["use"],
+            "norm_note": reference["norm_note"],
+            "synthetic": True,
+            "source": "seed",
+        },
+    )
     for value in reference["values"]:
-        _upsert(db, ReferenceValue, {
-            "id": seed_id(f"RS-TP-S-01:{value['scale']}:{value['value_type']}:{value.get('raw_value', '')}"),
-            "reference_set_id": ref_id, "scale": value["scale"],
-            "value_type": value["value_type"],
-            "raw_value": value.get("raw_value"),
-            "percentile": value.get("percentile"),
-            "t_score": value.get("t_score"),
-            "eneatype": value.get("eneatype"),
-            "synthetic": True, "source": "seed",
-        })
+        _upsert(
+            db,
+            ReferenceValue,
+            {
+                "id": seed_id(
+                    f"RS-TP-S-01:{value['scale']}:{value['value_type']}:{value.get('raw_value', '')}"
+                ),
+                "reference_set_id": ref_id,
+                "scale": value["scale"],
+                "value_type": value["value_type"],
+                "raw_value": value.get("raw_value"),
+                "percentile": value.get("percentile"),
+                "t_score": value.get("t_score"),
+                "eneatype": value.get("eneatype"),
+                "synthetic": True,
+                "source": "seed",
+            },
+        )
 
     # --- consent template + grants for the 30 profiles --------------------------
     consent_id = seed_id("consent:v1")
@@ -290,36 +415,66 @@ def _seed_rows(db: Session) -> None:
         "usen para probar el sistema. Podés revocar el consentimiento en "
         "cualquier momento."
     )
-    _upsert(db, ConsentVersion, {
-        "id": consent_id, "version_no": 1,
-        "title": "Consentimiento informado de investigación (sintético)",
-        "body": consent_body, "effective_from": datetime(2026, 1, 1).date(),
-        "is_active": True, "synthetic": True, "source": "seed",
-    })
+    _upsert(
+        db,
+        ConsentVersion,
+        {
+            "id": consent_id,
+            "version_no": 1,
+            "title": "Consentimiento informado de investigación (sintético)",
+            "body": consent_body,
+            "effective_from": datetime(2026, 1, 1).date(),
+            "is_active": True,
+            "synthetic": True,
+            "source": "seed",
+        },
+    )
     for profile in profiles:
         user_id = seed_id(profile["key"])
         grant_id = seed_id(f"grant:{profile['key']}")
-        _upsert(db, ConsentGrant, {
-            "id": grant_id, "user_id": user_id, "consent_version_id": consent_id,
-            "state": "granted",
-            "signed_at": datetime(2026, 1, 15, 10, 0, tzinfo=timezone.utc),
-            "ip": "127.0.0.1", "synthetic": True, "source": "seed",
-        })
+        _upsert(
+            db,
+            ConsentGrant,
+            {
+                "id": grant_id,
+                "user_id": user_id,
+                "consent_version_id": consent_id,
+                "state": "granted",
+                "signed_at": datetime(2026, 1, 15, 10, 0, tzinfo=timezone.utc),
+                "ip": "127.0.0.1",
+                "synthetic": True,
+                "source": "seed",
+            },
+        )
         session_id = seed_id(f"session:{profile['key']}")
-        _upsert(db, Session, {
-            "id": session_id, "user_id": user_id, "instrument_version_id": version_id,
-            "consent_grant_id": grant_id, "status": "completed",
-            "started_at": datetime(2026, 1, 15, 10, 5, tzinfo=timezone.utc),
-            "completed_at": datetime(2026, 1, 15, 10, 25, tzinfo=timezone.utc),
-            "synthetic": True, "source": "seed",
-        })
+        _upsert(
+            db,
+            Session,
+            {
+                "id": session_id,
+                "user_id": user_id,
+                "instrument_version_id": version_id,
+                "consent_grant_id": grant_id,
+                "status": "completed",
+                "started_at": datetime(2026, 1, 15, 10, 5, tzinfo=timezone.utc),
+                "completed_at": datetime(2026, 1, 15, 10, 25, tzinfo=timezone.utc),
+                "synthetic": True,
+                "source": "seed",
+            },
+        )
         for index, value in enumerate(profile["responses"], start=1):
-            _upsert(db, Response, {
-                "id": seed_id(f"response:{profile['key']}:i{index}"),
-                "session_id": session_id,
-                "item_id": seed_id(f"TP-S-01:i{index}"),
-                "value": value, "synthetic": True, "source": "seed",
-            })
+            _upsert(
+                db,
+                Response,
+                {
+                    "id": seed_id(f"response:{profile['key']}:i{index}"),
+                    "session_id": session_id,
+                    "item_id": seed_id(f"TP-S-01:i{index}"),
+                    "value": value,
+                    "synthetic": True,
+                    "source": "seed",
+                },
+            )
 
 
 def collect_counts(db: Session) -> dict:
@@ -330,9 +485,9 @@ def collect_counts(db: Session) -> dict:
             text(f"SELECT COUNT(*) FROM {table} WHERE source = 'seed'")
         ).scalar()
         counts[table] = int(raw or 0)
-    counts["seed_manifest_runs"] = db.scalar(
-        select(func.count()).select_from(SeedManifest)
-    ) or 0
+    counts["seed_manifest_runs"] = (
+        db.scalar(select(func.count()).select_from(SeedManifest)) or 0
+    )
     return counts
 
 
@@ -349,7 +504,9 @@ def _write_manifest(db: Session, counts: dict) -> dict:
         "seed_version": manifest.seed_version,
         "counts": manifest.counts,
         "checksum": manifest.checksum,
-        "executed_at": manifest.executed_at.isoformat() if manifest.executed_at else None,
+        "executed_at": manifest.executed_at.isoformat()
+        if manifest.executed_at
+        else None,
     }
 
 
@@ -445,7 +602,11 @@ def run_seed(db: Session) -> dict:
 def reset_seed(db: Session) -> dict:
     """--reset: preflight, delete seed rows, then re-seed atomically."""
     try:
-        db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended('testpsico.seed.reset', 0))"))
+        db.execute(
+            text(
+                "SELECT pg_advisory_xact_lock(hashtextextended('testpsico.seed.reset', 0))"
+            )
+        )
         db.execute(text("SET LOCAL app.seed_reset = 'on'"))
         _seed_reset_preflight(db)
         _reset_seed_rows(db)

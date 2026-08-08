@@ -1,0 +1,45 @@
+.root {
+	color: var(--color-ink-2);
+	font-size: var(--font-size-supporting);
+}
+
+.root ol {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-1);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.root li {
+	display: inline-flex;
+	min-height: 2.75rem;
+	align-items: center;
+	gap: var(--space-1);
+}
+
+.root a,
+.root li > span:first-child {
+	display: inline-flex;
+	min-height: 2.75rem;
+	align-items: center;
+	padding: var(--space-2);
+	border-radius: var(--radius-sm);
+}
+
+.root a:hover {
+	background: var(--color-canvas);
+	color: var(--color-accent-strong);
+}
+
+.root [aria-current="page"] {
+	color: var(--color-ink-1);
+	font-weight: 600;
+}
+
+.separator {
+	padding-inline: var(--space-1);
+	color: var(--color-ink-2);
+}

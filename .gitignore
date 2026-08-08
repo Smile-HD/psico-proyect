@@ -22,3 +22,6 @@ npm-debug.log*
 .vscode/
 *.swp
 .DS_Store
+
+# Local tooling indexes
+.codegraph/

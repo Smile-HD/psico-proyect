@@ -66,7 +66,11 @@ export default function NewInstrumentPage() {
 		const nextErrors = validateFields();
 		setFieldErrors(nextErrors);
 		setFormError(null);
-		const firstInvalid = nextErrors.key ? keyRef : nextErrors.title ? titleRef : null;
+		const firstInvalid = nextErrors.key
+			? keyRef
+			: nextErrors.title
+				? titleRef
+				: null;
 		if (firstInvalid) {
 			firstInvalid.current?.focus();
 			return;
@@ -126,12 +130,15 @@ export default function NewInstrumentPage() {
 				<p className={styles.eyebrow}>Catálogo · alta</p>
 				<h1>Nuevo instrumento</h1>
 				<p>
-					Registre los datos iniciales. El contenido de la versión se completa después.
+					Registre los datos iniciales. El contenido de la versión se completa
+					después.
 				</p>
 			</header>
 
 			<form className={styles.form} onSubmit={onSubmit} noValidate>
-				{formError ? <Notice tone="error" role="alert" message={formError} /> : null}
+				{formError ? (
+					<Notice tone="error" role="alert" message={formError} />
+				) : null}
 				<Field
 					ref={keyRef}
 					id="instrument-key"

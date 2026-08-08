@@ -138,7 +138,10 @@ function emptyScale(order: number): ScaleDraft {
 }
 
 function statusFor(status: AdminVersionDetail["status"]) {
-	const labels: Record<AdminVersionDetail["status"], { kind: StatusKind; label: string }> = {
+	const labels: Record<
+		AdminVersionDetail["status"],
+		{ kind: StatusKind; label: string }
+	> = {
 		draft: { kind: "draft", label: "Borrador" },
 		published: { kind: "published", label: "Publicada" },
 		archived: { kind: "archived", label: "Archivada" },
@@ -254,7 +257,9 @@ export default function VersionEditorPage() {
 							return {
 								...item,
 								options: item.options.map((option, optionIndexInItem) =>
-									optionIndexInItem === optionIndex ? { ...option, label } : option,
+									optionIndexInItem === optionIndex
+										? { ...option, label }
+										: option,
 								),
 							};
 						}),
@@ -267,7 +272,10 @@ export default function VersionEditorPage() {
 	function addScale() {
 		setDetail((current) =>
 			current
-				? { ...current, scales: [...current.scales, emptyScale(current.scales.length + 1)] }
+				? {
+						...current,
+						scales: [...current.scales, emptyScale(current.scales.length + 1)],
+					}
 				: current,
 		);
 	}
@@ -279,7 +287,10 @@ export default function VersionEditorPage() {
 				...current,
 				scales: current.scales
 					.filter((_, scaleIndex) => scaleIndex !== index)
-					.map((scale, scaleIndex) => ({ ...scale, display_order: scaleIndex + 1 })),
+					.map((scale, scaleIndex) => ({
+						...scale,
+						display_order: scaleIndex + 1,
+					})),
 			};
 		});
 	}
@@ -325,7 +336,9 @@ export default function VersionEditorPage() {
 						: {
 								...scale,
 								items: scale.items
-									.filter((_, currentItemIndex) => currentItemIndex !== itemIndex)
+									.filter(
+										(_, currentItemIndex) => currentItemIndex !== itemIndex,
+									)
 									.map((item, currentItemIndex) => ({
 										...item,
 										item_order: currentItemIndex + 1,
@@ -345,7 +358,8 @@ export default function VersionEditorPage() {
 				return `La escala «${scale.label}» necesita al menos un ítem.`;
 			}
 			for (const item of scale.items) {
-				if (!item.text.trim()) return `La escala «${scale.label}» tiene un ítem sin texto.`;
+				if (!item.text.trim())
+					return `La escala «${scale.label}» tiene un ítem sin texto.`;
 				if (item.options.length !== OPTION_COUNT) {
 					return `El ítem «${item.text}» debe tener exactamente ${OPTION_COUNT} opciones.`;
 				}
@@ -492,7 +506,8 @@ export default function VersionEditorPage() {
 	}
 
 	const status = statusFor(detail.status);
-	const dialogTitle = dialogAction === "publish" ? "Publicar versión" : "Archivar versión";
+	const dialogTitle =
+		dialogAction === "publish" ? "Publicar versión" : "Archivar versión";
 	const dialogDescription =
 		dialogAction === "publish"
 			? "La publicación congela el contenido y la versión ya no podrá editarse."
@@ -512,7 +527,8 @@ export default function VersionEditorPage() {
 				<div>
 					<p className={styles.eyebrow}>Editor de versión</p>
 					<h1>
-						{detail.title} <span className={styles.key}>({detail.instrument_key})</span>
+						{detail.title}{" "}
+						<span className={styles.key}>({detail.instrument_key})</span>
 					</h1>
 					<p className={styles.meta}>
 						<span className={styles.version}>v{detail.version_no}</span>
@@ -521,7 +537,10 @@ export default function VersionEditorPage() {
 							: null}
 					</p>
 				</div>
-				<StatusLabel kind={status.kind} symbol={detail.source === "seed" ? "·" : undefined}>
+				<StatusLabel
+					kind={status.kind}
+					symbol={detail.source === "seed" ? "·" : undefined}
+				>
 					{detail.source === "seed" ? "Referencia · sintético" : status.label}
 				</StatusLabel>
 			</header>
@@ -543,14 +562,22 @@ export default function VersionEditorPage() {
 						<h2 id="scales-heading">Escalas</h2>
 					</div>
 					{!readOnly ? (
-						<Button type="button" size="compact" variant="secondary" onClick={addScale}>
+						<Button
+							type="button"
+							size="compact"
+							variant="secondary"
+							onClick={addScale}
+						>
 							Agregar escala
 						</Button>
 					) : null}
 				</div>
 
 				{detail.scales.map((scale, scaleIndex) => (
-					<fieldset className={styles.scale} key={scale.id ?? `scale-${scaleIndex}`}>
+					<fieldset
+						className={styles.scale}
+						key={scale.id ?? `scale-${scaleIndex}`}
+					>
 						<legend className={styles.legend}>
 							<span>Escala {scale.display_order}</span>
 							{!readOnly ? (
@@ -605,7 +632,9 @@ export default function VersionEditorPage() {
 											})
 										}
 										disabled={readOnly}
-										aria-describedby={readOnly ? readOnlyDescriptionId : undefined}
+										aria-describedby={
+											readOnly ? readOnlyDescriptionId : undefined
+										}
 										required
 									/>
 									<Field
@@ -619,14 +648,19 @@ export default function VersionEditorPage() {
 											})
 										}
 										disabled={readOnly}
-										aria-describedby={readOnly ? readOnlyDescriptionId : undefined}
+										aria-describedby={
+											readOnly ? readOnlyDescriptionId : undefined
+										}
 									/>
 
 									<fieldset className={styles.options}>
 										<legend>Opciones de respuesta</legend>
 										{item.options.map((option, optionIndex) => (
 											<Field
-												key={option.id ?? `option-${scaleIndex}-${itemIndex}-${optionIndex}`}
+												key={
+													option.id ??
+													`option-${scaleIndex}-${itemIndex}-${optionIndex}`
+												}
 												id={`scale-${scaleIndex}-item-${itemIndex}-option-${optionIndex}`}
 												label={`Opción ${option.display_order}`}
 												value={option.label}
@@ -639,7 +673,9 @@ export default function VersionEditorPage() {
 													)
 												}
 												disabled={readOnly}
-												aria-describedby={readOnly ? readOnlyDescriptionId : undefined}
+												aria-describedby={
+													readOnly ? readOnlyDescriptionId : undefined
+												}
 											/>
 										))}
 									</fieldset>
@@ -662,7 +698,12 @@ export default function VersionEditorPage() {
 
 			<footer className={styles.actions}>
 				{!readOnly ? (
-					<Button type="button" busy={busy} pendingLabel="Guardando…" onClick={saveDraft}>
+					<Button
+						type="button"
+						busy={busy}
+						pendingLabel="Guardando…"
+						onClick={saveDraft}
+					>
 						Guardar borrador
 					</Button>
 				) : null}
@@ -717,11 +758,15 @@ export default function VersionEditorPage() {
 					type="button"
 					variant={dialogAction === "archive" ? "danger" : "primary"}
 					busy={busy}
-					pendingLabel={dialogAction === "archive" ? "Archivando…" : "Publicando…"}
+					pendingLabel={
+						dialogAction === "archive" ? "Archivando…" : "Publicando…"
+					}
 					data-dialog-confirm
 					onClick={confirmLifecycleAction}
 				>
-					{dialogAction === "archive" ? "Confirmar archivo" : "Confirmar publicación"}
+					{dialogAction === "archive"
+						? "Confirmar archivo"
+						: "Confirmar publicación"}
 				</Button>
 			</Dialog>
 		</div>

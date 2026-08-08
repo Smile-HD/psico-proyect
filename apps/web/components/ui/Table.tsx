@@ -32,9 +32,16 @@ export default function Table<Row>({
 		.join(" ");
 
 	return (
-		<div className={scrollClassName} role="region" aria-label={caption} tabIndex={0}>
+		<div
+			className={scrollClassName}
+			role="region"
+			aria-label={caption}
+			tabIndex={0}
+		>
 			<table className={styles.table}>
-				<caption className={captionHidden ? styles.visuallyHidden : styles.caption}>
+				<caption
+					className={captionHidden ? styles.visuallyHidden : styles.caption}
+				>
 					{caption}
 				</caption>
 				<thead>
@@ -60,11 +67,7 @@ export default function Table<Row>({
 								const content = column.render(row);
 
 								return column.rowHeader ? (
-									<th
-										key={column.id}
-										scope="row"
-										className={cellClassName}
-									>
+									<th key={column.id} scope="row" className={cellClassName}>
 										{content}
 									</th>
 								) : (

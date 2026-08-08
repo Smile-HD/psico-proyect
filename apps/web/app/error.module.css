@@ -12,4 +12,9 @@
 	font-size: 0.75rem;
 	margin: 0;
 }
-.backLink { color: var(--color-accent); font-weight: 600; text-decoration: underline; text-underline-offset: 0.2em; }
+.backLink {
+	color: var(--color-accent);
+	font-weight: 600;
+	text-decoration: underline;
+	text-underline-offset: 0.2em;
+}

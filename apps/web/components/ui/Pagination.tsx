@@ -53,7 +53,9 @@ export default function Pagination({
 								aria-label={`Ir a la página ${pageNumber}`}
 								onClick={() => changePage(pageNumber)}
 							>
-								{isCurrent ? `Página ${pageNumber} de ${totalPages}` : pageNumber}
+								{isCurrent
+									? `Página ${pageNumber} de ${totalPages}`
+									: pageNumber}
 							</Button>
 						);
 					})}

@@ -29,9 +29,9 @@ const FOCUSABLE_SELECTOR = [
 type InertElement = HTMLElement & { inert?: boolean };
 
 function getFocusableElements(panel: HTMLElement): HTMLElement[] {
-	return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-		(element) => !element.hasAttribute("aria-hidden"),
-	);
+	return Array.from(
+		panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+	).filter((element) => !element.hasAttribute("aria-hidden"));
 }
 
 export type DialogProps = {
@@ -105,12 +105,12 @@ export default function Dialog({
 		const focusTarget =
 			requestedFocus && panel.contains(requestedFocus)
 				? requestedFocus
-				: panel.querySelector<HTMLElement>("[data-dialog-autofocus]") ??
+				: (panel.querySelector<HTMLElement>("[data-dialog-autofocus]") ??
 					panel.querySelector<HTMLElement>(
 						"[data-dialog-cancel], button:not([data-dialog-confirm])",
 					) ??
 					getFocusableElements(panel)[0] ??
-					panel;
+					panel);
 		const focusFrame = window.requestAnimationFrame(() => {
 			focusTarget.focus();
 		});
@@ -164,10 +164,7 @@ export default function Dialog({
 				}
 			}
 			const returnFocus = returnFocusRef.current;
-			if (
-				returnFocus?.isConnected &&
-				!returnFocus.hasAttribute("disabled")
-			) {
+			if (returnFocus?.isConnected && !returnFocus.hasAttribute("disabled")) {
 				returnFocus.focus();
 			}
 			returnFocusRef.current = null;

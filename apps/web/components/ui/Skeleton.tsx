@@ -2,7 +2,12 @@ import type { CSSProperties } from "react";
 
 import styles from "./Skeleton.module.css";
 
-export type SkeletonVariant = "text" | "heading" | "control" | "block" | "table";
+export type SkeletonVariant =
+	| "text"
+	| "heading"
+	| "control"
+	| "block"
+	| "table";
 
 export type SkeletonProps = {
 	variant: SkeletonVariant;
@@ -27,7 +32,12 @@ export default function Skeleton({
 	const safeColumns = Math.max(1, columns);
 
 	return (
-		<div className={rootClassName} data-variant={variant} role="status" aria-live="polite">
+		<div
+			className={rootClassName}
+			data-variant={variant}
+			role="status"
+			aria-live="polite"
+		>
 			<span className={styles.visuallyHidden}>{label}</span>
 			{variant === "table" ? (
 				<div
@@ -45,8 +55,13 @@ export default function Skeleton({
 			) : (
 				<div className={styles.stack} aria-hidden="true">
 					{Array.from(
-						{ length: variant === "block" || variant === "control" ? 1 : safeLines },
-						(_, index) => <span className={styles.shape} key={index} />,
+						{
+							length:
+								variant === "block" || variant === "control" ? 1 : safeLines,
+						},
+						(_, index) => (
+							<span className={styles.shape} key={index} />
+						),
 					)}
 				</div>
 			)}

@@ -45,12 +45,15 @@ export default async function Home() {
 				<p className={styles.eyebrow}>TestPsico · entorno de investigación</p>
 				<h1>Estado del servicio</h1>
 				<p className={styles.lead}>
-					Información operativa del entorno sintético para comprobar la disponibilidad
-					y el contenido de referencia.
+					Información operativa del entorno sintético para comprobar la
+					disponibilidad y el contenido de referencia.
 				</p>
 			</header>
 
-			<section className={styles.statusSection} aria-labelledby="health-heading">
+			<section
+				className={styles.statusSection}
+				aria-labelledby="health-heading"
+			>
 				<div className={styles.sectionHeading}>
 					<div>
 						<p className={styles.kicker}>Disponibilidad</p>
@@ -87,8 +90,8 @@ export default async function Home() {
 					</StatusLabel>
 				</div>
 				<p className={styles.supportingText}>
-					El contenido se utiliza únicamente para investigación y pruebas del sistema;
-					no representa validación clínica.
+					El contenido se utiliza únicamente para investigación y pruebas del
+					sistema; no representa validación clínica.
 				</p>
 				<dl className={styles.summary}>
 					<div>

@@ -22,7 +22,9 @@ export default function EmptyState({
 
 	return (
 		<section className={rootClassName} aria-labelledby={titleId}>
-			{contextLabel ? <p className={styles.contextLabel}>{contextLabel}</p> : null}
+			{contextLabel ? (
+				<p className={styles.contextLabel}>{contextLabel}</p>
+			) : null}
 			<h2 id={titleId}>{title}</h2>
 			<p className={styles.description}>{description}</p>
 			{action ? <div className={styles.action}>{action}</div> : null}

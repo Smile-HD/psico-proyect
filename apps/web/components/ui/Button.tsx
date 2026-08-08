@@ -27,7 +27,8 @@ export default function Button({
 	...buttonProps
 }: ButtonProps) {
 	const rootClassName = [styles.root, className].filter(Boolean).join(" ");
-	const visibleContent = busy && pendingLabel !== undefined ? pendingLabel : children;
+	const visibleContent =
+		busy && pendingLabel !== undefined ? pendingLabel : children;
 
 	return (
 		<button

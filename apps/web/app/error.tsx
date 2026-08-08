@@ -24,7 +24,9 @@ export default function RootError({
 				retryLabel="Reintentar"
 				onRetry={reset}
 			/>
-			{error.digest ? <p className={styles.digest}>Referencia: {error.digest}</p> : null}
+			{error.digest ? (
+				<p className={styles.digest}>Referencia: {error.digest}</p>
+			) : null}
 		</main>
 	);
 }

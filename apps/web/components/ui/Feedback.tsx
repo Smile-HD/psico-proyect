@@ -58,13 +58,7 @@ export type NoticeProps = {
 	className?: string;
 };
 
-export function Notice({
-	tone,
-	message,
-	title,
-	role,
-	className,
-}: NoticeProps) {
+export function Notice({ tone, message, title, role, className }: NoticeProps) {
 	const resolvedRole = role ?? (tone === "error" ? "alert" : "status");
 	const rootClassName = [styles.root, styles.notice, className]
 		.filter(Boolean)

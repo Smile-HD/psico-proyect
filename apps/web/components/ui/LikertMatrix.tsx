@@ -35,7 +35,9 @@ export default function LikertMatrix({
 }: LikertMatrixProps) {
 	const matrixId = `likert-${useId().replace(/:/g, "")}`;
 	const columnOptions = items[0]?.options ?? [];
-	const rootClassName = [styles.scrollRegion, className].filter(Boolean).join(" ");
+	const rootClassName = [styles.scrollRegion, className]
+		.filter(Boolean)
+		.join(" ");
 
 	function handleChange(
 		event: ChangeEvent<HTMLInputElement>,
@@ -46,7 +48,12 @@ export default function LikertMatrix({
 	}
 
 	return (
-		<div className={rootClassName} role="region" aria-label={caption} tabIndex={0}>
+		<div
+			className={rootClassName}
+			role="region"
+			aria-label={caption}
+			tabIndex={0}
+		>
 			<table className={styles.table}>
 				<caption>{caption}</caption>
 				<thead>

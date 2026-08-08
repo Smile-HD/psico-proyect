@@ -12,7 +12,8 @@
 .tableCell {
 	display: block;
 	background: var(--color-border);
-	animation: skeletonPulse var(--motion-slow) var(--ease-standard) infinite alternate;
+	animation: skeletonPulse var(--motion-slow) var(--ease-standard) infinite
+		alternate;
 }
 
 .shape {

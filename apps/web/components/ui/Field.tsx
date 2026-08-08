@@ -164,7 +164,11 @@ function FieldComponent(
 		);
 	} else if (control === "select") {
 		controlElement = (
-			<select {...commonProps} ref={handleControlRef} className={styles.control}>
+			<select
+				{...commonProps}
+				ref={handleControlRef}
+				className={styles.control}
+			>
 				{options.map((option) => (
 					<option key={option.value} value={option.value}>
 						{option.label}

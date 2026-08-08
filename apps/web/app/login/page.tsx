@@ -56,9 +56,7 @@ export default function LoginPage() {
 				</header>
 
 				<form className={styles.form} onSubmit={onSubmit}>
-					{error ? (
-						<Notice tone="error" role="alert" message={error} />
-					) : null}
+					{error ? <Notice tone="error" role="alert" message={error} /> : null}
 					<Field
 						id="login-username"
 						name="username"
@@ -79,18 +77,17 @@ export default function LoginPage() {
 						autoComplete="current-password"
 						required
 					/>
-					<Button
-						type="submit"
-						busy={busy}
-						pendingLabel="Iniciando…"
-					>
+					<Button type="submit" busy={busy} pendingLabel="Iniciando…">
 						Iniciar sesión
 					</Button>
 				</form>
 
 				<div className={styles.footer}>
 					<Link href="/">Volver al inicio</Link>
-					<p>Datos sintéticos para investigación. No se realizan afirmaciones clínicas.</p>
+					<p>
+						Datos sintéticos para investigación. No se realizan afirmaciones
+						clínicas.
+					</p>
 				</div>
 			</section>
 		</div>

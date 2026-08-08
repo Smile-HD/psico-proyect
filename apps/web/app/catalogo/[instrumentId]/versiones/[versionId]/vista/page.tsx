@@ -136,7 +136,11 @@ export default function PublishedViewPage() {
 			</p>
 
 			{version.scales.map((scale) => (
-				<section key={scale.id} className={styles.scale} aria-labelledby={`scale-${scale.id}`}>
+				<section
+					key={scale.id}
+					className={styles.scale}
+					aria-labelledby={`scale-${scale.id}`}
+				>
 					<h2 id={`scale-${scale.id}`}>
 						{scale.display_order}. {scale.label}
 					</h2>

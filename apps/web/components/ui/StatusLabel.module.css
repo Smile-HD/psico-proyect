@@ -12,13 +12,21 @@
 }
 
 .root[data-kind="draft"] {
-	background: color-mix(in srgb, var(--color-warning) 10%, var(--color-surface));
+	background: color-mix(
+		in srgb,
+		var(--color-warning) 10%,
+		var(--color-surface)
+	);
 	color: var(--color-warning);
 }
 
 .root[data-kind="published"],
 .root[data-kind="success"] {
-	background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
+	background: color-mix(
+		in srgb,
+		var(--color-success) 10%,
+		var(--color-surface)
+	);
 	color: var(--color-success);
 }
 
@@ -33,7 +41,11 @@
 }
 
 .root[data-kind="warning"] {
-	background: color-mix(in srgb, var(--color-warning) 10%, var(--color-surface));
+	background: color-mix(
+		in srgb,
+		var(--color-warning) 10%,
+		var(--color-surface)
+	);
 	color: var(--color-warning);
 }
 

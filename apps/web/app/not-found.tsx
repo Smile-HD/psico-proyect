@@ -10,8 +10,8 @@ export default function NotFound() {
 			<p className={styles.code}>404</p>
 			<h1>Página no encontrada</h1>
 			<p>
-				La dirección que buscás no existe o fue movida. Podés volver al inicio del
-				servicio.
+				La dirección que buscás no existe o fue movida. Podés volver al inicio
+				del servicio.
 			</p>
 			<Link className={styles.link} href="/">
 				Volver al inicio

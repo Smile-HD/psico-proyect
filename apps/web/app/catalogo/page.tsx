@@ -53,7 +53,9 @@ function displayStatus(row: InstrumentRow) {
 	if (row.source === "seed") {
 		return { kind: "reference" as const, label: "Referencia · sintético" };
 	}
-	return STATUS_LABEL[row.status] ?? { kind: "neutral" as const, label: row.status };
+	return (
+		STATUS_LABEL[row.status] ?? { kind: "neutral" as const, label: row.status }
+	);
 }
 
 export default function CatalogListPage() {
@@ -61,7 +63,8 @@ export default function CatalogListPage() {
 	const [rows, setRows] = useState<InstrumentRow[] | null>(null);
 	const [total, setTotal] = useState(0);
 	const [page, setPage] = useState(1);
-	const [filter, setFilter] = useState<(typeof FILTERS)[number]["value"]>("all");
+	const [filter, setFilter] =
+		useState<(typeof FILTERS)[number]["value"]>("all");
 	const [error, setError] = useState<string | null>(null);
 	const [reloadKey, setReloadKey] = useState(0);
 	const { user, ready } = useSessionUser();
@@ -124,9 +127,9 @@ export default function CatalogListPage() {
 			id: "status",
 			header: "Estado",
 			render: (row) => {
-			const status = displayStatus(row);
-			return <StatusLabel kind={status.kind}>{status.label}</StatusLabel>;
-		},
+				const status = displayStatus(row);
+				return <StatusLabel kind={status.kind}>{status.label}</StatusLabel>;
+			},
 		},
 		{
 			id: "version",
@@ -196,7 +199,12 @@ export default function CatalogListPage() {
 			</nav>
 
 			{!ready || !user ? (
-				<Skeleton variant="table" rows={5} columns={5} label="Cargando el catálogo…" />
+				<Skeleton
+					variant="table"
+					rows={5}
+					columns={5}
+					label="Cargando el catálogo…"
+				/>
 			) : error ? (
 				<ErrorState
 					title="No se pudo cargar el catálogo"
@@ -204,7 +212,12 @@ export default function CatalogListPage() {
 					onRetry={() => setReloadKey((current) => current + 1)}
 				/>
 			) : rows === null ? (
-				<Skeleton variant="table" rows={5} columns={5} label="Cargando el catálogo…" />
+				<Skeleton
+					variant="table"
+					rows={5}
+					columns={5}
+					label="Cargando el catálogo…"
+				/>
 			) : rows.length === 0 ? (
 				<EmptyState
 					contextLabel={`${total} resultados`}

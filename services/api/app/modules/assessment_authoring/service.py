@@ -536,7 +536,6 @@ class CatalogService:
                     option.label = option_input["label"]
                     option.locale = option_input["locale"]
 
-
     def publish(
         self, db: Session, user: Any, version_id: uuid.UUID, idempotency_key: str
     ) -> tuple[int, dict[str, Any]]:

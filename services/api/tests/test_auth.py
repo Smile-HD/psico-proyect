@@ -21,7 +21,12 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
-from app.core.auth import create_access_token, decode_access_token, hash_password, verify_password
+from app.core.auth import (
+    create_access_token,
+    decode_access_token,
+    hash_password,
+    verify_password,
+)
 from app.core.config import settings
 from app.core.errors import ApiError, FORBIDDEN, build_envelope
 from app.core.permissions import (
@@ -198,18 +203,16 @@ def test_login_identical_401_no_account_disclosure(client, seeded_db_session) ->
 
 def test_admin_allowed_audit_endpoint(client, seeded_db_session) -> None:
     token = _login(client, "admin", settings.dev_password_admin).json()["access_token"]
-    resp = client.get(
-        "/api/v1/audit", headers={"Authorization": f"Bearer {token}"}
-    )
+    resp = client.get("/api/v1/audit", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
     assert "events" in resp.json()
 
 
 def test_evaluado_denied_audit_endpoint(client, seeded_db_session, db_session) -> None:
-    token = _login(client, "evaluado", settings.dev_password_evaluado).json()["access_token"]
-    resp = client.get(
-        "/api/v1/audit", headers={"Authorization": f"Bearer {token}"}
-    )
+    token = _login(client, "evaluado", settings.dev_password_evaluado).json()[
+        "access_token"
+    ]
+    resp = client.get("/api/v1/audit", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 403
     body = resp.json()
     assert set(body["error"].keys()) == {"code", "message", "request_id", "details"}

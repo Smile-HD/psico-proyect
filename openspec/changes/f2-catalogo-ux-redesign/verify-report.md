@@ -83,3 +83,10 @@ Documented in `apply-progress.md` and `tasks.md`; requires a browser session:
 ## Recommendation
 
 Archive the change. V.2/V.3 remain as owner follow-ups documented in the apply-progress; they do not block archive because the automated evidence covers build, scope, smoke, contrast, and anti-checklist gates.
+
+## Gatekeeper resolutions (owner, before archive)
+
+1. **V.2/V.3 manual checklist** — the owner explicitly approved closing the change ("vamos con verify y archive"). The automated part (route smoke, contrast table, anti-checklist) passed with the evidence above; the remaining keyboard/screen-reader/mobile pass is recorded in `apply-progress.md` as an owner follow-up, non-blocking for archive (same pattern as F2).
+2. **Verify subagent timeout** — the parent executed all automated checks with exact commands recorded above; no evidence was fabricated.
+
+**Final verdict: PASS for archive** (manual checklist kept as documented follow-up).

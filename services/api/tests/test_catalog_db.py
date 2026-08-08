@@ -56,11 +56,12 @@ def test_catalog_models_declare_four_level_constraints() -> None:
 
     assert any(
         isinstance(constraint, UniqueConstraint)
-        and tuple(column.name for column in constraint.columns)
-        == ("id", "version_id")
+        and tuple(column.name for column in constraint.columns) == ("id", "version_id")
         for constraint in Scale.__table__.constraints
     )
-    assert any(isinstance(constraint, CheckConstraint) for constraint in options.values())
+    assert any(
+        isinstance(constraint, CheckConstraint) for constraint in options.values()
+    )
 
 
 def test_catalog_model_relationships_form_scale_item_option_chain() -> None:
@@ -156,10 +157,7 @@ def test_catalog_schema_has_four_level_tables(catalog_db_session) -> None:
     tables = {
         row[0]
         for row in catalog_db_session.execute(
-            text(
-                "SELECT tablename FROM pg_tables "
-                "WHERE schemaname = current_schema()"
-            )
+            text("SELECT tablename FROM pg_tables WHERE schemaname = current_schema()")
         )
     }
     assert {"scales", "response_options", "idempotency_records"} <= tables
@@ -216,13 +214,21 @@ def test_seed_reset_coexists_with_runtime_rows(catalog_db_session) -> None:
     )
     catalog_db_session.commit()
     reset_seed(catalog_db_session)
-    assert catalog_db_session.execute(
-        text("SELECT source FROM instruments WHERE id = :id"), {"id": runtime_id}
-    ).scalar_one() == "runtime"
-    assert catalog_db_session.execute(
-        text("SELECT COUNT(*) FROM scales WHERE source = 'seed'")
-    ).scalar_one() == 5
-    catalog_db_session.execute(text("DELETE FROM instruments WHERE id = :id"), {"id": runtime_id})
+    assert (
+        catalog_db_session.execute(
+            text("SELECT source FROM instruments WHERE id = :id"), {"id": runtime_id}
+        ).scalar_one()
+        == "runtime"
+    )
+    assert (
+        catalog_db_session.execute(
+            text("SELECT COUNT(*) FROM scales WHERE source = 'seed'")
+        ).scalar_one()
+        == 5
+    )
+    catalog_db_session.execute(
+        text("DELETE FROM instruments WHERE id = :id"), {"id": runtime_id}
+    )
     catalog_db_session.commit()
 
 
@@ -256,9 +262,12 @@ def test_seed_reset_rejects_cross_ownership_before_delete(catalog_db_session) ->
     with pytest.raises(SeedResetConflictError) as error:
         reset_seed(catalog_db_session)
     assert str(error.value) == "seed_reset_dependency_conflict"
-    assert catalog_db_session.execute(
-        text("SELECT COUNT(*) FROM scales WHERE source = 'seed'")
-    ).scalar_one() == before
+    assert (
+        catalog_db_session.execute(
+            text("SELECT COUNT(*) FROM scales WHERE source = 'seed'")
+        ).scalar_one()
+        == before
+    )
     catalog_db_session.execute(
         text("DELETE FROM sessions WHERE id = :id"), {"id": runtime_session_id}
     )
@@ -276,7 +285,11 @@ def test_status_check_and_option_range_are_enforced(catalog_db_session) -> None:
             "INSERT INTO instruments (id, key, title, synthetic, source) "
             "VALUES (:id, :key, :title, true, 'runtime')"
         ),
-        {"id": instrument_id, "key": f"TEST-{uuid.uuid4().hex[:8]}", "title": "Synthetic"},
+        {
+            "id": instrument_id,
+            "key": f"TEST-{uuid.uuid4().hex[:8]}",
+            "title": "Synthetic",
+        },
     )
     catalog_db_session.execute(
         text(

@@ -37,7 +37,12 @@ def migrated_f1_db():
             "INSERT INTO instruments (id, key, title, description, synthetic, source) "
             "VALUES (:id, :key, :title, :description, true, 'seed')"
         ),
-        {"id": instrument_id, "key": fixture["key"], "title": fixture["title"], "description": fixture["description"]},
+        {
+            "id": instrument_id,
+            "key": fixture["key"],
+            "title": fixture["title"],
+            "description": fixture["description"],
+        },
     )
     session.execute(
         text(
@@ -89,7 +94,11 @@ def migrated_f1_db():
             "(id, session_id, item_id, value, synthetic, source) "
             "VALUES (:id, :session_id, :item_id, 3, true, 'seed')"
         ),
-        {"id": seed_id("migration-response"), "session_id": session_id, "item_id": item_ids[0]},
+        {
+            "id": seed_id("migration-response"),
+            "session_id": session_id,
+            "item_id": item_ids[0],
+        },
     )
     session.execute(
         text(
@@ -124,23 +133,37 @@ def test_f1_seed_identity_and_references_survive(migrated_f1_db) -> None:
     ).one()
     assert version_row[0] == version_id
     assert version_row[1].isoformat() == "2026-01-01T00:00:00+00:00"
-    assert migrated_f1_db.execute(
-        text("SELECT COUNT(*) FROM scales WHERE version_id = :id"), {"id": version_id}
-    ).scalar_one() == 5
-    assert migrated_f1_db.execute(
-        text("SELECT COUNT(*) FROM instrument_items WHERE version_id = :id"), {"id": version_id}
-    ).scalar_one() == 20
-    assert migrated_f1_db.execute(
-        text(
-            "SELECT COUNT(*) FROM response_options ro "
-            "JOIN instrument_items ii ON ii.id = ro.item_id WHERE ii.version_id = :id"
-        ),
-        {"id": version_id},
-    ).scalar_one() == 100
-    assert migrated_f1_db.execute(
-        text("SELECT COUNT(*) FROM sessions WHERE instrument_version_id = :id"),
-        {"id": version_id},
-    ).scalar_one() == 1
+    assert (
+        migrated_f1_db.execute(
+            text("SELECT COUNT(*) FROM scales WHERE version_id = :id"),
+            {"id": version_id},
+        ).scalar_one()
+        == 5
+    )
+    assert (
+        migrated_f1_db.execute(
+            text("SELECT COUNT(*) FROM instrument_items WHERE version_id = :id"),
+            {"id": version_id},
+        ).scalar_one()
+        == 20
+    )
+    assert (
+        migrated_f1_db.execute(
+            text(
+                "SELECT COUNT(*) FROM response_options ro "
+                "JOIN instrument_items ii ON ii.id = ro.item_id WHERE ii.version_id = :id"
+            ),
+            {"id": version_id},
+        ).scalar_one()
+        == 100
+    )
+    assert (
+        migrated_f1_db.execute(
+            text("SELECT COUNT(*) FROM sessions WHERE instrument_version_id = :id"),
+            {"id": version_id},
+        ).scalar_one()
+        == 1
+    )
     assert migrated_f1_db.execute(
         text("SELECT item_id FROM responses WHERE id = :id"),
         {"id": seed_id("migration-response")},
@@ -163,6 +186,9 @@ def test_f1_backfill_preserves_option_identity_and_values(migrated_f1_db) -> Non
 
 def test_f1_backfill_upgrade_is_idempotent(migrated_f1_db) -> None:
     # The fixture's second upgrade call is the idempotency proof; counts remain stable.
-    assert migrated_f1_db.execute(
-        text("SELECT version_num FROM alembic_version")
-    ).scalar_one() == "0005_catalog_four_level"
+    assert (
+        migrated_f1_db.execute(
+            text("SELECT version_num FROM alembic_version")
+        ).scalar_one()
+        == "0005_catalog_four_level"
+    )

@@ -21,7 +21,10 @@ EXPECTED_CATALOG = {
     "auth.login",
     "auth.denied",
     "user.role_changed",
+    "instrument.draft_created",
+    "instrument.draft_updated",
     "instrument.published",
+    "instrument.archived",
     "consent.granted",
     "consent.revoked",
     "session.started",
@@ -77,9 +80,7 @@ def test_unknown_event_type_rejected() -> None:
 
 
 def test_update_on_audit_log_rejected(engine, db_session) -> None:
-    row = audit_core.record(
-        db_session, "auth.login", actor_role="admin", commit=True
-    )
+    row = audit_core.record(db_session, "auth.login", actor_role="admin", commit=True)
     with pytest.raises(DBAPIError):
         with engine.begin() as conn:
             conn.execute(

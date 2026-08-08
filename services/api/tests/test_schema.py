@@ -26,21 +26,38 @@ from tests.conftest import alembic_config
 
 EXPECTED_TABLES = {
     # identity
-    "users", "roles", "user_roles",
+    "users",
+    "roles",
+    "user_roles",
     # institutions
-    "institutions", "campuses", "faculties", "programs",
+    "institutions",
+    "campuses",
+    "faculties",
+    "programs",
     # instruments
-    "instruments", "instrument_versions", "scales", "instrument_items",
-    "response_options", "idempotency_records",
+    "instruments",
+    "instrument_versions",
+    "scales",
+    "instrument_items",
+    "response_options",
+    "idempotency_records",
     # sessions
-    "sessions", "responses",
+    "sessions",
+    "responses",
     # scoring
-    "reference_sets", "reference_values", "score_runs",
+    "reference_sets",
+    "reference_values",
+    "score_runs",
     # recommendation (F5) + reporting (F6) — empty-but-migrated
-    "recommendation_rules", "recommendation_results",
-    "reports", "report_templates",
+    "recommendation_rules",
+    "recommendation_results",
+    "reports",
+    "report_templates",
     # audit + consent + seed bookkeeping
-    "audit_log", "consent_versions", "consent_grants", "seed_manifest",
+    "audit_log",
+    "consent_versions",
+    "consent_grants",
+    "seed_manifest",
 }
 
 F5_F6_TABLES = {
@@ -55,17 +72,35 @@ KEY_COLUMNS = {
     "roles": {"name", "synthetic", "source"},
     "instruments": {"key"},
     "instrument_versions": {
-        "version_no", "status", "is_immutable", "response_type",
-        "adaptation_metadata", "created_at", "updated_at", "archived_at",
+        "version_no",
+        "status",
+        "is_immutable",
+        "response_type",
+        "adaptation_metadata",
+        "created_at",
+        "updated_at",
+        "archived_at",
     },
     "scales": {"version_id", "label", "locale", "display_order", "synthetic", "source"},
     "instrument_items": {"scale_id", "item_order", "locale", "required", "text"},
     "response_options": {
-        "item_id", "label", "locale", "display_order", "value", "synthetic", "source",
+        "item_id",
+        "label",
+        "locale",
+        "display_order",
+        "value",
+        "synthetic",
+        "source",
     },
     "idempotency_records": {
-        "actor_user_id", "operation", "resource_scope", "idempotency_key",
-        "request_hash", "response_status", "response_body", "created_at",
+        "actor_user_id",
+        "operation",
+        "resource_scope",
+        "idempotency_key",
+        "request_hash",
+        "response_status",
+        "response_body",
+        "created_at",
     },
     "sessions": {"user_id", "consent_grant_id", "status"},
     "responses": {"session_id", "item_id", "value"},
@@ -134,9 +169,9 @@ def test_unique_constraints_present(schema_url: str) -> None:
             tuple(uc.get("column_names") or [])
             for uc in inspector.get_unique_constraints(table)
         }
-        assert any(
-            set(cols) == expected_cols for cols in uq_cols
-        ), f"{table} missing unique on {expected_cols}; got {uq_cols}"
+        assert any(set(cols) == expected_cols for cols in uq_cols), (
+            f"{table} missing unique on {expected_cols}; got {uq_cols}"
+        )
 
 
 def test_check_constraints_present(schema_url: str) -> None:
@@ -145,11 +180,13 @@ def test_check_constraints_present(schema_url: str) -> None:
         "responses": ["ck_value_1_to_5"],
         "instrument_items": ["ck_item_order_positive"],
         "instrument_versions": [
-            "ck_instrument_version_status", "ck_published_versions_immutable",
+            "ck_instrument_version_status",
+            "ck_published_versions_immutable",
         ],
         "scales": ["ck_scale_display_order_positive"],
         "response_options": [
-            "ck_option_display_order_1_to_5", "ck_option_value_1_to_5",
+            "ck_option_display_order_1_to_5",
+            "ck_option_value_1_to_5",
         ],
         "consent_grants": ["ck_consent_state"],
         "sessions": ["ck_session_status"],
@@ -166,7 +203,9 @@ def test_upgrade_is_idempotent(schema_url: str) -> None:
     command.upgrade(alembic_config(schema_url), "head")
     engine = _schema_engine(schema_url)
     with engine.connect() as conn:
-        revision = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+        revision = conn.execute(
+            text("SELECT version_num FROM alembic_version")
+        ).scalar()
     engine.dispose()
     assert revision == "0005_catalog_four_level"
 
@@ -179,7 +218,9 @@ def test_linear_history() -> None:
     for revision in script.walk_revisions():
         if revision.revision not in heads:
             children = [
-                r for r in script.walk_revisions() if r.down_revision == revision.revision
+                r
+                for r in script.walk_revisions()
+                if r.down_revision == revision.revision
             ]
             assert len(children) == 1, (
                 f"branch at {revision.revision}: {[c.revision for c in children]}"

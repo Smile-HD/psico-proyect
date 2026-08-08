@@ -38,6 +38,7 @@ from app.models.audit import AuditLog
 EXPECTED_MATRIX = {
     "manage_users_roles": {ADMIN},
     "manage_institutions": {ADMIN},
+    "manage_instruments": {ADMIN, PSICOLOGO},
     "publish_instruments": {ADMIN},
     "read_catalog": {ADMIN, PSICOLOGO, EVALUADO},
     "run_sessions": {ADMIN, PSICOLOGO, EVALUADO},

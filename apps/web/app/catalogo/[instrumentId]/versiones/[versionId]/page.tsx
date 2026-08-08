@@ -44,6 +44,59 @@ type AdminVersionDetail = {
 	scales: ScaleDraft[];
 };
 
+/** API shape: option rows arrive as `response_options` per item. */
+type ApiOption = {
+	id?: string;
+	display_order: number;
+	label: string;
+	locale: string;
+};
+
+type ApiItem = {
+	id?: string;
+	item_order: number;
+	text: string;
+	locale: string;
+	required: boolean;
+	response_options: ApiOption[];
+};
+
+type ApiScale = {
+	id?: string;
+	label: string;
+	locale: string;
+	display_order: number;
+	items: ApiItem[];
+};
+
+type ApiDetail = Omit<AdminVersionDetail, "scales"> & { scales: ApiScale[] };
+
+/** Convert the API detail (response_options) to the editor draft shape. */
+function toDraft(detail: ApiDetail): AdminVersionDetail {
+	return {
+		...detail,
+		scales: detail.scales.map((scale) => ({
+			id: scale.id,
+			label: scale.label,
+			locale: scale.locale,
+			display_order: scale.display_order,
+			items: scale.items.map((item) => ({
+				id: item.id,
+				item_order: item.item_order,
+				text: item.text,
+				locale: item.locale,
+				required: item.required,
+				options: item.response_options.map((option) => ({
+					id: option.id,
+					display_order: option.display_order,
+					label: option.label,
+					locale: option.locale,
+				})),
+			})),
+		})),
+	};
+}
+
 const OPTION_COUNT = 5;
 const NEUTRAL_OPTIONS = [
 	"Nunca",
@@ -99,12 +152,12 @@ export default function VersionEditorPage() {
 			return;
 		}
 		let cancelled = false;
-		apiFetch<AdminVersionDetail>(
+		apiFetch<ApiDetail>(
 			`/api/v1/catalog/admin/versions/${params.versionId}`,
 			{ token: localStorage.getItem("psico_token") ?? "" },
 		)
 			.then((data) => {
-				if (!cancelled) setDetail(data);
+				if (!cancelled) setDetail(toDraft(data));
 			})
 			.catch((err) => {
 				if (!cancelled) {
@@ -334,11 +387,11 @@ export default function VersionEditorPage() {
 				},
 			);
 			setNotice("Versión publicada. La publicación es inmutable.");
-			const refreshed = await apiFetch<AdminVersionDetail>(
+			const refreshed = await apiFetch<ApiDetail>(
 				`/api/v1/catalog/admin/versions/${params.versionId}`,
 				{ token: localStorage.getItem("psico_token") ?? "" },
 			);
-			setDetail(refreshed);
+			setDetail(toDraft(refreshed));
 		} catch (err) {
 			const apiError = err instanceof ApiError ? err.payload : null;
 			setError(
@@ -373,11 +426,11 @@ export default function VersionEditorPage() {
 				},
 			);
 			setNotice("Versión archivada.");
-			const refreshed = await apiFetch<AdminVersionDetail>(
+			const refreshed = await apiFetch<ApiDetail>(
 				`/api/v1/catalog/admin/versions/${params.versionId}`,
 				{ token: localStorage.getItem("psico_token") ?? "" },
 			);
-			setDetail(refreshed);
+			setDetail(toDraft(refreshed));
 		} catch (err) {
 			const apiError = err instanceof ApiError ? err.payload : null;
 			setError(

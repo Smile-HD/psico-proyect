@@ -122,7 +122,7 @@ No UI tests were added because doing so would violate the explicit no-new-framew
 - [ ] **V.2** — Route-by-route manual checklist (proposal AC4) covering `/`, `/login`, `/catalogo`, `/catalogo/nuevo`, version editor, evaluator view, and shared navigation for anonymous, `admin`, `psicologo`, and `evaluado`: health/seed loading + error/retry; login autocomplete/busy/error announcement/focus recovery; catalog role guard, `aria-pressed` filters, responsive table, skeleton, empty state, error/retry, pagination labels, status labels; nuevo per-field validation and first-invalid focus; editor draft loading, save/busy/status, read-only/seed, breadcrumb, publish/archive dialogs; evaluator matrix and not-found treatment; wordmark, active route, role-preserving links, logout, keyboard operation, mobile layout. [UX] Done when: every checklist row passes and is recorded with no functional regression (proposal AC4). <!-- sdd-owner: implementation -->
 - [ ] **V.3** — Contrast AA final verification on the delivered routes (rendered pairs, not only the token table): normal text ≥4.5:1, large text ≥3:1, meaningful non-text indicators ≥3:1 on the shipped pages. [UX] Done when: every sampled rendered pairing passes WCAG 2.2 AA (proposal AC3 + web-accessibility contrast scenarios). <!-- sdd-owner: implementation -->
 - [ ] Start or reuse bounded review of each chained PR (foundations → components → pages → a11y/docs) before merge, then deliver each slice to main in order (stacked-to-main). <!-- sdd-owner: parent -->
-    - [ ] Run `sdd-verify` against the 4 specs (web-foundations, web-components, web-pages, web-accessibility) and the proposal acceptance criteria, confirm the freeze/ceiling result, then archive the change. <!-- sdd-owner: parent -->
+  - [ ] Run `sdd-verify` against the 4 specs (web-foundations, web-components, web-pages, web-accessibility) and the proposal acceptance criteria, confirm the freeze/ceiling result, then archive the change. <!-- sdd-owner: parent -->
 
 ## Slice 2 — Layer 2: Low-state primitives (PR 2)
 
@@ -199,7 +199,7 @@ nextRecommended: parent-lifecycle
 Strict TDD is enabled repository-wide, but the web package has no test runner and the design forbids adding a UI test framework. Per the parent decision, `next build` is the applicable build-gated RED/GREEN-equivalent proof; no test dependency or web test suite was added.
 
 | Tasks | Test layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | T2.1–T2.10 | N/A — web build/typecheck | Baseline build passed | Contract/static gates defined before implementation | Final build passed | Variant/ARIA/token audit passed | Final build passed after Dialog focus containment refinement |
 | T2.11 | `npm run build` + static audit | Prior build passed | Layer gate assertions defined | Final build passed | 375px/desktop behavior checked against source contracts | No further code change |
 
@@ -215,7 +215,6 @@ Strict TDD is enabled repository-wide, but the web package has no test runner an
 - Parent lifecycle owns bounded review, delivery, verification, and archive. No receipt was created or approved and no commit was made.
 - The exact current unchecked task lines remain above under `Remaining unchecked tasks`; they begin at T3.1 and include T3/T4/V plus the two parent rows.
 
-
 ## Slice 3 (PR 3) — pages and route states (T3.1–T3.8)
 
 - Home, login, catalog list, new-instrument form, and version editor migrated to the ui/ primitives (StatusLabel, Field, Table, Skeleton, EmptyState, ErrorState, Pagination, Breadcrumb, Dialog, Button busy); no `window.confirm`/`alert()` remain.
@@ -223,4 +222,95 @@ Strict TDD is enabled repository-wide, but the web package has no test runner an
 - Route surfaces added: root `loading.tsx`/`error.tsx`/`not-found.tsx` + loading/error per route (login, catalogo, nuevo, editor, vista) with layout-matched Skeleton and ErrorState retry.
 - Gate: `npm run build` PASS; scope check: `lib/api.ts`, `lib/auth.ts`, `services/api/**` untouched.
 - The apply subagent timed out after implementing T3.1–T3.6; the parent completed the vista migration (T3.6 integration), created the missing route surfaces (T3.7), fixed relative CSS module paths, and ran the layer-3 gate (T3.8).
-- Remaining: interactive browser smoke checklist (anonymous/admin/psicologo/evaluado) is manual, per design §6 Layer 3.
+  - Remaining: interactive browser smoke checklist (anonymous/admin/psicologo/evaluado) is manual, per design §6 Layer 3.
+
+## Slice 4 (PR 4) — accessibility, documentation, and freeze
+
+- Change: `f2-catalogo-ux-redesign`
+- Slice: 4 of 4 / PR 4, stacked-to-main.
+- Assigned work: implementation-owned T4.1–T4.4 and V.1 only.
+- Deferred manual owner work: V.2 and V.3 remain unchecked; their complete route and rendered-contrast checklist is in `apps/web/docs/design-system.md`.
+- Delivery decision: `auto-chain`, `stacked-to-main`; the parent-provided size exception remains in force. No commit, review receipt, validation receipt, or lifecycle gate was created by `sdd-apply`.
+
+### Structured status consumed and produced
+
+```yaml
+schemaName: spec-driven
+changeName: f2-catalogo-ux-redesign
+artifactStore: openspec
+planningHome: D:\\Personal\\Proyectos\\TestPsico\\psico-proyect\\openspec
+changeRoot: openspec/changes/f2-catalogo-ux-redesign
+artifacts: { proposal: done, specs: done, design: done, tasks: done, applyProgress: done, verifyReport: missing }
+taskProgress: { implementation_complete: 28, implementation_remaining: 2, unchecked: [V.2, V.3], deferred_manual_remaining: 2, parent_lifecycle_remaining: 2 }
+deferredParentActions: { total: 2, complete: 0, remaining: 2 }
+applyState: ready
+dependencies: { apply: ready, verify: blocked, archive: blocked }
+actionContext:
+  mode: repo-local
+  workspaceRoot: D:\\Personal\\Proyectos\\TestPsico\\psico-proyect
+  allowedEditRoots: [D:\\Personal\\Proyectos\\TestPsico\\psico-proyect]
+  warnings:
+    - Parent supplied edit authority and the active runtime attempt token; native status was authoritative.
+    - No web browser runner exists; interactive keyboard/screen-reader/375px checks remain owner lifecycle work.
+nextRecommended: parent-lifecycle
+```
+
+### Completed tasks and persisted checkbox updates
+
+- **T4.1 `[x]`** — Wrote `apps/web/docs/design-system.md` as the sole F3–F6 inheritance reference. It documents final tokens without redefining runtime CSS, Source Sans 3 typography, spacing, component/ARIA contracts, evaluator matrix semantics, accessibility rules, and the requested do/don’t rules.
+- **T4.2 `[x]`** — Computed the used token pairings with WCAG relative luminance. Only token values were changed: `--color-border` is now `#84909d` for ≥3:1 control boundaries, and `--color-success` is now `#2d7831` so its 10% status tint remains ≥4.5:1. All audited text, action, focus, border, and status-tint pairs pass. The superseded legacy success token is absent from tracked `apps/web`.
+- **T4.3 `[x]`** — Completed the automated source pass for focus-visible, reduced motion, ARIA/live regions, one `h1` per route page, effective target sizes, status-without-color, and native-dialog absence. The full manual owner checklist (skip link, dialog lifecycle, screen reader, 375px/desktop, reduced motion, and rendered statuses) is documented and not claimed as executed without a browser runner.
+- **T4.4 `[x]`** — Completed the freeze report below: changed paths are frontend/documentation-only, protected API/auth/service/contract paths are unchanged, package metadata is unchanged, no native alert/confirm remains, and the anti-checklist scan passes.
+- **V.1 `[x]`** — Final `cd apps/web && npm run build` passed with Next.js 14.2.35 and strict TypeScript checking. Scope and dependency checks passed.
+
+Persisted `tasks.md` was updated from `[ ]` to `[x]` for T4.1, T4.2, T4.3, T4.4, and V.1, then re-read. V.2, V.3, and both parent-owned lifecycle rows remain `[ ]`.
+
+### Files changed in Slice 4
+
+- `apps/web/app/globals.css` — contrast token adjustments only.
+- `apps/web/docs/design-system.md` — new inheritance, contrast, accessibility, owner-checklist, and freeze reference.
+- `openspec/changes/f2-catalogo-ux-redesign/tasks.md` — five implementation-owned checkboxes marked complete.
+- `openspec/changes/f2-catalogo-ux-redesign/apply-progress.md` — this cumulative Slice 4 section.
+
+### Verification evidence
+
+- RED: a pre-change contract script failed because `design-system.md` was absent; the same script also guarded the failing initial border/success-tint thresholds.
+- GREEN: contrast script passed every audited token pairing and all six 10% status-tint pairings; legacy success token scan passed.
+- TRIANGULATE: static audit passed for `:focus-visible`, reduced-motion handling, ARIA contracts, one `h1` per route page, target-size rules, status text/symbols, no native alert/confirm, no route/component raw hex, no `system-ui`, `git diff --check`, protected-path scope, and unchanged package metadata.
+- REFACTOR: documentation was consolidated as one inheritance reference; no duplicate token source, dependency, component rewrite, or route rewrite was introduced.
+- Build: `cd apps/web && npm run build` passed after the token/documentation changes.
+
+### Strict TDD / build-gated evidence
+
+The repository declares strict TDD, but the web package has no runner and the design prohibits adding one. The applicable RED/GREEN/TRIANGULATE/REFACTOR evidence is the failing/passing contract scripts, static source gates, and the final Next build; no web test dependency was added.
+
+| Task | Test layer | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- |
+| T4.1 | Documentation contract | Required reference absent | Required sections and values present | ARIA/matrix/anti-checklist content audited | Single canonical reference retained |
+| T4.2 | Python contrast calculation | Initial border and success tint failed | All final pairings passed | Used route/component contexts included | Only two semantic token values changed |
+| T4.3 | Static accessibility audit | Existing source required final gate | Focus, motion, ARIA, h1, target, status checks passed | Owner checklist covers unautomatable render checks | No page/component rewrite allowed by slice |
+| T4.4 | Scope/freeze audit | Final freeze assertions not yet satisfied | Scope, line budget, dependency, and anti-checklist passed | Protected paths and package metadata rechecked | Decoration was not added |
+| V.1 | Next build/typecheck | Final gate pending | `npm run build` passed | `git diff --check` and scope checks passed | No code refactor needed |
+
+### Final freeze report
+
+- Changed paths: `apps/web/app/globals.css`, `apps/web/docs/design-system.md`, and the two OpenSpec documentation artifacts listed above. No path outside `apps/web` plus documentation was changed.
+- Changed-line count: **298** additions + deletions (112 tracked diff lines plus 186 new documentation lines); ceiling **3,500**; result **PASS**.
+- `apps/web/package.json` and `apps/web/package-lock.json`: unchanged; dependency set unchanged.
+- `apps/web/lib/api.ts`, `apps/web/lib/auth.ts`, `services/api/**`, `packages/contracts/**`, database, and lifecycle files: unchanged.
+- `window.alert()` / `window.confirm()`: zero runtime occurrences in tracked `apps/web` source (`*.tsx`/`*.css`); the documentation names both APIs only to prohibit them.
+- Anti-checklist: no route/component raw hex, no `system-ui`, no duplicate token source, no new styling dependency, no matrix reimplementation, no prohibited legacy success token, and no one-off route styling values detected.
+
+### Deviations and risks
+
+- No browser or screen-reader runner is installed. T4.3 records the automated subset and the owner must run the documented rendered checklist before final verification. V.2 and V.3 are intentionally not marked.
+- The root layout provides the shell `main`, while some existing route fallback/evaluator surfaces also declare `main`; this was not rewritten because the slice explicitly limits page changes. The owner should confirm the rendered landmark tree during V.2 and correct it in a follow-up if the App Router composition exposes nested `main` landmarks.
+- The contrast freeze makes the border more perceivable than the initial low-emphasis separator and darkens success slightly; both are token-only, justified by the explicit AA thresholds.
+
+### Workload / PR boundary and remaining tasks
+
+- PR 4 / Slice 4 / T4.1–T4.4 + V.1 only; strategy `stacked-to-main`; parent owns review, delivery, V.2/V.3 manual execution, `sdd-verify`, and archive.
+- Remaining unchecked implementation/manual lines:
+  - [ ] **V.2** — Route-by-route manual checklist (proposal AC4) covering `/`, `/login`, `/catalogo`, `/catalogo/nuevo`, version editor, evaluator view, and shared navigation for anonymous, `admin`, `psicologo`, and `evaluado`: health/seed loading + error/retry; login autocomplete/busy/error announcement/focus recovery; catalog role guard, `aria-pressed` filters, responsive table, skeleton, empty state, error/retry, pagination labels, status labels; nuevo per-field validation and first-invalid focus; editor draft loading, save/busy/status, read-only/seed, breadcrumb, publish/archive dialogs; evaluator matrix and not-found treatment; wordmark, active route, role-preserving links, logout, keyboard operation, mobile layout. [UX] Done when: every checklist row passes and is recorded with no functional regression (proposal AC4). <!-- sdd-owner: implementation -->
+  - [ ] **V.3** — Contrast AA final verification on the delivered routes (rendered pairs, not only the token table): normal text ≥4.5:1, large text ≥3:1, meaningful non-text indicators ≥3:1 on the shipped pages. [UX] Done when: every sampled rendered pairing passes WCAG 2.2 AA (proposal AC3 + web-accessibility contrast scenarios). <!-- sdd-owner: implementation -->
+- Deferred parent lifecycle lines remain unchecked: bounded review/delivery of the four stacked slices, then `sdd-verify` against the four specs and archive.

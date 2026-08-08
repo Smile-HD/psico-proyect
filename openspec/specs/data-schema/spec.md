@@ -57,3 +57,21 @@ The recommendation and reporting families MUST be created by migrations but MUST
 - GIVEN a database migrated but not seeded
 - WHEN introspecting F5/F6 tables
 - THEN all columns exist even though no data is present
+
+### Requirement: Four-level Family Integrity
+
+The instruments family MUST enforce at schema level: version status constrained to exactly `draft`, `published`, or `archived`; the immutability CHECK `(status <> 'published') OR is_immutable` preserved and extended so archived versions are immutable; `version_no` unique per instrument; scale order unique within its version; item order unique within its scale; response-option value unique within its item and constrained to the inclusive range 1–5; and the foreign-key chain `instrument_version → scale → item → response_option`. The existing `responses.value BETWEEN 1 AND 5` invariant MUST be preserved.
+
+#### Scenario: Status constraint rejects free text
+
+- GIVEN a version with an unconstrained status value
+- WHEN the row is written
+- THEN the status CHECK rejects it
+
+#### Scenario: Option value range enforced
+
+- GIVEN a response option with server-side value 6
+- WHEN the row is written
+- THEN the value CHECK rejects it
+- AND values 1 through 5 are accepted
+

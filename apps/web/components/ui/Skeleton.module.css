@@ -1,0 +1,92 @@
+.root {
+	width: 100%;
+}
+
+.stack {
+	display: grid;
+	gap: var(--space-2);
+}
+
+.shape,
+.tableHeader,
+.tableCell {
+	display: block;
+	background: var(--color-border);
+	animation: skeletonPulse var(--motion-slow) var(--ease-standard) infinite alternate;
+}
+
+.shape {
+	min-height: 1rem;
+	border-radius: var(--radius-sm);
+}
+
+.root[data-variant="text"] .shape {
+	width: min(100%, 32rem);
+}
+
+.root[data-variant="text"] .shape:nth-child(even) {
+	width: min(82%, 28rem);
+}
+
+.root[data-variant="heading"] .shape {
+	width: min(70%, 22rem);
+	min-height: 2rem;
+}
+
+.root[data-variant="control"] .shape {
+	min-height: 2.75rem;
+}
+
+.root[data-variant="block"] .shape {
+	min-height: 8rem;
+}
+
+.tableGrid {
+	display: grid;
+	grid-template-columns: repeat(var(--skeleton-columns), minmax(7rem, 1fr));
+	min-width: 36rem;
+	border-top: 1px solid var(--color-border);
+	border-inline-start: 1px solid var(--color-border);
+}
+
+.tableHeader,
+.tableCell {
+	min-height: 2.75rem;
+	border-inline-end: 1px solid var(--color-border);
+	border-bottom: 1px solid var(--color-border);
+}
+
+.tableHeader {
+	min-height: 3.25rem;
+}
+
+.visuallyHidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+@keyframes skeletonPulse {
+	from {
+		opacity: 0.52;
+	}
+
+	to {
+		opacity: 0.82;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.shape,
+	.tableHeader,
+	.tableCell {
+		animation: none;
+		opacity: 0.65;
+	}
+}

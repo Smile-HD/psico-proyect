@@ -1,7 +1,195 @@
-html,
+:root {
+  /* Semantic color tokens */
+  --color-canvas: #F7F8FA;
+  --color-surface: #FFFFFF;
+  --color-ink-1: #1B2430;
+  --color-ink-2: #465260;
+  --color-accent: #24435F;
+  --color-accent-strong: #1F344A;
+  --color-border: #D8DEE5;
+  --color-error: #B3261E;
+  --color-success: #2E7D32;
+  --color-warning: #8A5A00;
+  --color-focus: #24435F;
+  --color-on-accent: #FFFFFF;
+
+  /* Typography tokens */
+  --font-family-sans: var(--font-source-sans-3, "Source Sans 3"), "Segoe UI", "Trebuchet MS", sans-serif;
+  --font-size-caption: 0.75rem;
+  --font-size-supporting: 0.875rem;
+  --font-size-body: 1rem;
+  --font-size-lead: 1.125rem;
+  --font-size-heading-3: 1.25rem;
+  --font-size-heading-2: 1.5rem;
+  --font-size-heading-1: clamp(1.75rem, 1.5rem + 1vw, 2rem);
+  --line-height-body: 1.6;
+  --line-height-heading: 1.2;
+
+  /* 4px and 8px spacing rhythm */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Bounded geometry and restrained elevation */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --shadow-subtle: 0 2px 8px rgb(36 67 95 / 0.08);
+
+  /* Motion tokens */
+  --motion-fast: 150ms;
+  --motion-standard: 220ms;
+  --motion-slow: 300ms;
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Declared stacking layers */
+  --z-base: 0;
+  --z-header: 10;
+  --z-overlay: 100;
+  --z-dialog: 110;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-canvas);
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
 body {
+  min-width: 20rem;
   margin: 0;
-  padding: 0;
-  background: #fafafa;
-  color: #1a1a1a;
+  background: var(--color-canvas);
+  color: var(--color-ink-1);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  text-rendering: optimizeLegibility;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-family-sans);
+}
+
+button,
+input,
+select,
+textarea {
+  font-size: var(--font-size-body);
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.18em;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+blockquote {
+  margin-block: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--color-ink-1);
+  line-height: var(--line-height-heading);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--font-size-heading-1);
+  font-weight: 600;
+}
+
+h2 {
+  font-size: var(--font-size-heading-2);
+  font-weight: 600;
+}
+
+h3 {
+  font-size: var(--font-size-heading-3);
+  font-weight: 600;
+}
+
+p,
+li,
+dd {
+  max-width: 75ch;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 1ms;
+    --motion-standard: 1ms;
+    --motion-slow: 1ms;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
 }

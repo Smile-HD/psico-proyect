@@ -30,7 +30,8 @@ EXPECTED_TABLES = {
     # institutions
     "institutions", "campuses", "faculties", "programs",
     # instruments
-    "instruments", "instrument_versions", "instrument_items",
+    "instruments", "instrument_versions", "scales", "instrument_items",
+    "response_options", "idempotency_records",
     # sessions
     "sessions", "responses",
     # scoring
@@ -53,8 +54,19 @@ KEY_COLUMNS = {
     "users": {"username", "password_hash", "synthetic", "source"},
     "roles": {"name", "synthetic", "source"},
     "instruments": {"key"},
-    "instrument_versions": {"version_no", "status", "is_immutable"},
-    "instrument_items": {"scale", "scale_order", "text"},
+    "instrument_versions": {
+        "version_no", "status", "is_immutable", "response_type",
+        "adaptation_metadata", "created_at", "updated_at", "archived_at",
+    },
+    "scales": {"version_id", "label", "locale", "display_order", "synthetic", "source"},
+    "instrument_items": {"scale_id", "item_order", "locale", "required", "text"},
+    "response_options": {
+        "item_id", "label", "locale", "display_order", "value", "synthetic", "source",
+    },
+    "idempotency_records": {
+        "actor_user_id", "operation", "resource_scope", "idempotency_key",
+        "request_hash", "response_status", "response_body", "created_at",
+    },
     "sessions": {"user_id", "consent_grant_id", "status"},
     "responses": {"session_id", "item_id", "value"},
     "reference_sets": {"key", "reference_status", "use", "norm_note"},
@@ -114,6 +126,8 @@ def test_unique_constraints_present(schema_url: str) -> None:
         "roles": {"name"},
         "instruments": {"key"},
         "reference_sets": {"key"},
+        "scales": {"version_id", "display_order"},
+        "response_options": {"item_id", "display_order"},
     }
     for table, expected_cols in uniques.items():
         uq_cols = {
@@ -129,8 +143,14 @@ def test_check_constraints_present(schema_url: str) -> None:
     inspector = inspect(_schema_engine(schema_url))
     checks = {
         "responses": ["ck_value_1_to_5"],
-        "instrument_items": ["ck_scale_order_1_to_5"],
-        "instrument_versions": ["ck_published_versions_immutable"],
+        "instrument_items": ["ck_item_order_positive"],
+        "instrument_versions": [
+            "ck_instrument_version_status", "ck_published_versions_immutable",
+        ],
+        "scales": ["ck_scale_display_order_positive"],
+        "response_options": [
+            "ck_option_display_order_1_to_5", "ck_option_value_1_to_5",
+        ],
         "consent_grants": ["ck_consent_state"],
         "sessions": ["ck_session_status"],
         "audit_log": ["ck_audit_outcome"],
@@ -148,7 +168,7 @@ def test_upgrade_is_idempotent(schema_url: str) -> None:
     with engine.connect() as conn:
         revision = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
     engine.dispose()
-    assert revision == "0004_audit_append_only_trigger"
+    assert revision == "0005_catalog_four_level"
 
 
 def test_linear_history() -> None:

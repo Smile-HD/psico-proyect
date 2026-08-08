@@ -1,0 +1,28 @@
+.root {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+}
+
+.pages {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: var(--space-1);
+}
+
+.currentPage {
+	padding-inline: var(--space-2);
+	color: var(--color-ink-1);
+	font-weight: 600;
+	line-height: 2.25rem;
+	white-space: nowrap;
+}
+
+@media (max-width: 30rem) {
+	.root {
+		justify-content: center;
+	}
+}

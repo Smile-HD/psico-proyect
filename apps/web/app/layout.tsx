@@ -48,10 +48,12 @@ export default function RootLayout({
 					</main>
 					<footer className={styles.footer}>
 						<div className={styles.footerContent}>
-							<p className={styles.footerNote}>TestPsico · entorno de investigación</p>
+							<p className={styles.footerNote}>
+								TestPsico · entorno de investigación
+							</p>
 							<p>
-								Todos los datos son sintéticos y de uso exclusivo para investigación
-								(research-only).
+								Todos los datos son sintéticos y de uso exclusivo para
+								investigación (research-only).
 							</p>
 						</div>
 					</footer>

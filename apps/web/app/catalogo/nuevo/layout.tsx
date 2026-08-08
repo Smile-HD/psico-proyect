@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Nuevo instrumento",
-  description: "Registra un instrumento sintético para el catálogo de investigación.",
+	title: "Nuevo instrumento",
+	description:
+		"Registra un instrumento sintético para el catálogo de investigación.",
 };
 
 export default function NewInstrumentLayout({
-  children,
+	children,
 }: {
-  children: React.ReactNode;
+	children: React.ReactNode;
 }) {
-  return children;
+	return children;
 }

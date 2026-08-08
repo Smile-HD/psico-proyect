@@ -35,7 +35,7 @@ The system MUST expose `POST /api/v1/auth/login` returning an HS256 JWT for vali
 
 ### Requirement: require_roles Deny-by-default
 
-Every protected route MUST declare `require_roles(...)`; there MUST be no default-allow. The access matrix MUST live in code: `admin` manages users/institutions, publishes instruments, views audit, runs seeds; `psicólogo` reads the catalog, runs sessions, signs/views consent, views results; `evaluado` reads the catalog, runs own sessions, signs/views own consent, views own results.
+Every protected route MUST declare `require_roles(...)`; there MUST be no default-allow. The access matrix MUST live in code: `admin` manages users/institutions, manages instruments (creates and edits drafts, archives versions via `manage_instruments`), publishes instruments (`publish_instruments`), views audit, runs seeds; `psicólogo` manages instruments (creates and edits drafts, archives versions) but MUST NOT publish, reads published catalog content only, runs sessions, signs/views consent, views results; `evaluado` reads published catalog content only, runs own sessions, signs/views own consent, views own results. The `read_catalog` capability is a published-only payload contract for all three roles: drafts and archived versions are never exposed through it, and draft administration is a separate protected surface behind `manage_instruments`.
 
 #### Scenario: Admin allowed
 
@@ -50,11 +50,25 @@ Every protected route MUST declare `require_roles(...)`; there MUST be no defaul
 - THEN the request fails with 403
 - AND no partial data is returned
 
+#### Scenario: Psicólogo cannot publish
+
+- GIVEN a `psicólogo` JWT with an editable draft
+- WHEN calling the publish endpoint
+- THEN the request fails with 403
+
+#### Scenario: Evaluado sees published content only
+
+- GIVEN an `evaluado` JWT
+- WHEN reading the published catalog
+- THEN only published versions are returned
+- AND drafts and archived versions are never exposed
+
 #### Scenario: No default-allow
 
 - GIVEN a protected route exercised by a user
 - WHEN no role list was declared for it
 - THEN the request is denied by default with 403
+
 
 ### Requirement: Safe Denials
 

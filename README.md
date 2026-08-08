@@ -27,6 +27,10 @@ psico/
 - Docker Engine + Compose v2
 - Puertos libres 8000 (api), 5432 (db), 6379 (redis), 3000 (web)
 
+> **¿Trabajás con un agente de IA?** Leé [AGENTS.md](./AGENTS.md) primero:
+> explica cómo usar OpenSpec como memoria del proyecto, las invariantes que no
+> se negocian y las trampas conocidas del entorno.
+
 ## Inicio rápido
 
 ```bash
@@ -46,14 +50,14 @@ docker compose run --rm api python -m app.seed
 scripts/test.sh            # Windows: scripts\test.ps1
 ```
 
-La página web está en http://localhost:3000 (salud + estado de la semilla, UI en
-español). La API está en http://localhost:8000 (`/health`, `/api/v1/seed/status`
+La página web está en <http://localhost:3000> (salud + estado de la semilla, UI en
+español). La API está en <http://localhost:8000> (`/health`, `/api/v1/seed/status`
 son públicos).
 
 ## Comandos oficiales
 
 | Tarea | Comando |
-|---|---|
+| --- | --- |
 | Up (api + db + redis + web) | `docker compose up -d --build` |
 | Migrar | `docker compose run --rm api alembic upgrade head` |
 | Sembrar (idempotente) | `docker compose run --rm api python -m app.seed` |

@@ -8,13 +8,23 @@ Full nine-family relational schema with a linear, schema-only Alembic chain. Rec
 
 ### Requirement: Nine Table Families
 
-The schema MUST define: identity (`users`, `roles`, `user_roles`), institutions (`institutions`, `campuses`, `faculties`, `programs`), instruments (`instruments`, `instrument_versions`, `instrument_items`), sessions (`sessions`, `responses`), scoring (`reference_sets`, `reference_values`, `score_runs`), recommendation (`recommendation_rules`, `recommendation_results`), reporting (`reports`, `report_templates`), audit (`audit_log`), consent (`consent_versions`, `consent_grants`), plus `seed_manifest`.
+The schema MUST define: identity (`users`, `roles`, `user_roles`), institutions (`institutions`, `campuses`, `faculties`, `programs`), instruments (`instruments`, `instrument_versions`, `scales`, `items`, `response_options`), sessions (`sessions`, `responses`), scoring (`reference_sets`, `reference_values`, `score_runs`), recommendation (`recommendation_rules`, `recommendation_results`), reporting (`reports`, `report_templates`), audit (`audit_log`), consent (`consent_versions`, `consent_grants`), plus `seed_manifest`.
 
-#### Scenario: Fresh upgrade creates all families
+The instruments family is the four-level model `instrument → instrument_version → scale → item → response_option`. Versions own scales, scales own items, and items own five response options. The F1 three-table shape with a denormalized `scale` string is superseded.
+
+#### Scenario: Fresh upgrade creates the four-level family
 
 - GIVEN an empty database
 - WHEN `alembic upgrade head` runs
-- THEN all nine families plus `seed_manifest` exist with the expected columns
+- THEN all nine families exist with the four-level instruments family: versions own scales, scales own items, and items own five response options
+
+#### Scenario: Seeded instrument survives the amendment
+
+- GIVEN a database migrated and seeded after the F2 migration
+- WHEN inspecting `TP-S-01:v1`
+- THEN the instrument, its version, 20 items, 5 scales, and 100 response options exist
+- AND the seed item ids and version id are identical to their pre-migration values
+
 
 ### Requirement: Linear Alembic Chain
 

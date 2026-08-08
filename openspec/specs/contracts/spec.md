@@ -46,7 +46,7 @@ Every API error MUST return exactly `{"error": {"code", "message", "request_id",
 
 ### Requirement: Idempotent Mutations
 
-Every mutating endpoint (`POST`, `PUT`, `PATCH`) MUST accept an `Idempotency-Key` header. Repeating a request with the same key for the same resource MUST replay the original result without duplicating the side effect; a new key MUST start an independent operation.
+Every mutating endpoint (`POST`, `PUT`, `PATCH`) MUST accept an `Idempotency-Key` header. Repeating a request with the same key for the same resource MUST replay the original result without duplicating the side effect; a new key MUST start an independent operation. Side effects include both data rows and audit events: a replayed request MUST NOT duplicate either. F2 is the first implementation of this requirement: every F2 catalog mutation (create instrument, create draft version, save draft hierarchy, publish, archive) MUST implement it. When the same key is reused with a materially different request body, the system MUST NOT create a second side effect and MUST reject with `CONFLICT`.
 
 #### Scenario: Retry without duplication
 
@@ -55,11 +55,25 @@ Every mutating endpoint (`POST`, `PUT`, `PATCH`) MUST accept an `Idempotency-Key
 - THEN the response repeats the original result
 - AND no second side effect is created
 
+#### Scenario: Replay does not duplicate audit
+
+- GIVEN a publish that succeeded with `Idempotency-Key: k`
+- WHEN the same request is retried with the same key
+- THEN exactly one `instrument.published` audit event exists for that transition
+
 #### Scenario: Distinct keys are independent
 
 - GIVEN two mutations with different `Idempotency-Key` values
 - WHEN both are executed
 - THEN each side effect is applied exactly once
+
+#### Scenario: Same key, different body conflicts
+
+- GIVEN a successful mutation with `Idempotency-Key: k` and body A
+- WHEN the client sends the same key with a materially different body B
+- THEN the system returns `CONFLICT`
+- AND no second side effect is created
+
 
 ### Requirement: Contract Language
 

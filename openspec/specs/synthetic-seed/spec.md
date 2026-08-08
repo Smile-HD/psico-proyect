@@ -54,7 +54,7 @@ Each run MUST write `seed_manifest` with `seed_version`, per-table counts, a che
 
 ### Requirement: --reset Scoped to Seed-owned Rows
 
-`--reset` MUST delete only seed-owned rows, in FK order, then re-seed. It MUST NOT touch non-seed data.
+`--reset` MUST delete only seed-owned rows, in FK order, then re-seed. It MUST NOT touch non-seed data. Before deleting anything, `--reset` MUST run an atomic dependency preflight: if any non-seed row references a seed-owned catalog row, reset MUST stop with a stable `CONFLICT` and make no deletion; it MUST never delete a seed parent and leave a runtime foreign key broken. Under the F2 coexistence rule, runtime catalog rows are separate roots and never depend on seed-owned catalog rows, so the normal reset recreates the seed graph without affecting runtime instruments or versions.
 
 #### Scenario: Scoped reset
 
@@ -62,3 +62,18 @@ Each run MUST write `seed_manifest` with `seed_version`, per-table counts, a che
 - WHEN `python -m app.seed --reset` runs
 - THEN only seed-owned rows are removed and re-created
 - AND the non-seed row remains intact
+
+#### Scenario: Reset coexists with runtime catalog content
+
+- GIVEN seed-owned rows plus runtime instruments and versions with no cross-ownership
+- WHEN `python -m app.seed --reset` runs
+- THEN the seed graph is recreated
+- AND all runtime instruments and versions remain intact
+
+#### Scenario: Cross-ownership aborts atomically
+
+- GIVEN a non-seed row that references a seed-owned catalog row
+- WHEN `python -m app.seed --reset` runs
+- THEN the reset stops with a stable `CONFLICT`
+- AND no deletion is made
+

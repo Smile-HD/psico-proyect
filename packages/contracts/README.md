@@ -129,3 +129,71 @@ default-allow. See `services/api/app/core/permissions.py` (source of truth):
 | View results | ✅ | ✅ | ✅ (own) |
 | View audit log | ✅ | ❌ | ❌ |
 | Run seeds / manifests | ✅ | ❌ | ❌ |
+
+## 7. Instrument catalog (F2)
+
+### 7.1 Four-level model and lifecycle
+
+Instruments follow `instrument → scale → item → response_option`. The MVP
+response type is fixed to `likert_1_5`: exactly five ordered options per item
+whose server-side values are 1–5; the public payload exposes option *labels*
+only, never numeric values or answer keys.
+
+Version lifecycle is `draft → published → archived` with a `CHECK` constraint
+and DB triggers: a published or archived version is immutable (no in-place
+edits, no delete); archive is the only transition allowed on a published
+version; there is no unarchive. Editing always creates a new draft version;
+`version_no` auto-increments under a parent-instrument row lock.
+
+Two published versions of the same instrument may coexist and both are
+session-startable. The seed instrument `TP-S-01:v1` is read-only in every F2
+workflow: the UI never offers it as an editable parent, and the service
+rejects any attempt to version it (`seed_catalog_read_only`).
+
+### 7.2 Endpoint surface
+
+All paths are under `/api/v1/catalog`. Every mutating endpoint requires an
+`Idempotency-Key` header.
+
+| Method and path | Roles | Purpose |
+| --- | --- | --- |
+| `GET /published-versions/{version_id}` | admin, psicólogo, evaluado | Published-only evaluator payload (labels, no values) |
+| `GET /admin/instruments` | admin, psicólogo | Paginated authoring list (`page`, `page_size` ≤ 100, `key`, `status`) |
+| `GET /admin/instruments/{instrument_id}` | admin, psicólogo | Admin detail; seed is marked read-only |
+| `POST /admin/instruments` | admin, psicólogo | Create runtime instrument + initial draft |
+| `POST /admin/instruments/{instrument_id}/versions` | admin, psicólogo | Allocate a new draft (optionally cloned from a runtime published version) |
+| `GET /admin/versions/{version_id}` | admin, psicólogo | Full authoring representation |
+| `PUT /admin/versions/{version_id}/content` | admin, psicólogo | Atomically save the complete draft aggregate |
+| `POST /admin/versions/{version_id}/publish` | admin | Validate and publish a draft |
+| `POST /admin/versions/{version_id}/archive` | admin, psicólogo | Archive a published version |
+
+Non-published IDs are indistinguishable from missing IDs on the published
+read route (`NOT_FOUND`); administration routes deny non-authorized roles with
+`FORBIDDEN` before touching any resource, and `auth.denied` is recorded.
+
+### 7.3 Idempotency rules
+
+- Every create/save/publish/archive call carries one `Idempotency-Key` per
+  user intent. A timed-out retry reuses the key; a new intent gets a new key.
+- Replaying the same key and body returns the original response with no
+  duplicated side effect (no extra version, transition, or audit event).
+- Same key with a different body returns `CONFLICT` and performs no second
+  side effect.
+- Records are retained indefinitely (ADR-003).
+
+### 7.4 Error codes (catalog)
+
+`VALIDATION_ERROR` (incomplete/inconsistent aggregate), `FORBIDDEN`
+(role gate), `NOT_FOUND` (missing or non-published read), `CONFLICT`
+(immutable mutation, archive of a draft, same-key-different-body), and
+`seed_catalog_read_only` for any operation on the seed instrument. Every
+error follows the single envelope with `request_id` (section 2).
+
+### 7.5 F3 handoff contract
+
+F3 (session) consumes: the `instrument_version_id` copied verbatim into each
+session and never changed; the published read payload for rendering; the
+freezing rule (published versions never change; a new version is a new id);
+and stable errors for draft/archived/missing/invalid versions. F4 consumes
+the item ↔ scale ↔ option relationship with the server-side 1–5 mapping via
+a non-public fixture projection.

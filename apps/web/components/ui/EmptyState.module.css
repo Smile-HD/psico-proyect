@@ -1,0 +1,29 @@
+.root {
+	display: grid;
+	justify-items: start;
+	gap: var(--space-3);
+	padding-block: var(--space-8);
+	border-top: 1px solid var(--color-border);
+	border-bottom: 1px solid var(--color-border);
+}
+
+.contextLabel {
+	color: var(--color-ink-2);
+	font-size: var(--font-size-caption);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.root h2 {
+	font-size: var(--font-size-heading-2);
+}
+
+.description {
+	max-width: 60ch;
+	color: var(--color-ink-2);
+}
+
+.action {
+	margin-top: var(--space-2);
+}

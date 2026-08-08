@@ -29,6 +29,13 @@ export default function NavBar() {
 			{canManage ? (
 				<Link href="/catalogo">Catálogo de instrumentos</Link>
 			) : null}
+			{user ? (
+				<span style={{ marginLeft: "1rem", color: "#666" }}>{user.username}</span>
+			) : (
+				<Link href="/login" style={{ marginLeft: "1rem" }}>
+					Iniciar sesión
+				</Link>
+			)}
 		</nav>
 	);
 }

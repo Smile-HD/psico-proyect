@@ -6,6 +6,8 @@
  * server remains the authority for every permission decision.
  */
 
+import { useEffect, useState } from "react";
+
 import { apiBase, apiFetch, ApiError } from "./api";
 
 const TOKEN_KEY = "psico_token";
@@ -30,6 +32,29 @@ export function getSessionUser(): SessionUser | null {
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * Session read safe for client components.
+ *
+ * Reading localStorage during render breaks hydration (server HTML has no
+ * session). This hook returns `ready: false` until after mount, so the first
+ * client render matches the server; effects may then branch on the session.
+ */
+export function useSessionUser(): {
+	user: SessionUser | null;
+	ready: boolean;
+} {
+	const [state, setState] = useState<{
+		user: SessionUser | null;
+		ready: boolean;
+	}>({ user: null, ready: false });
+
+	useEffect(() => {
+		setState({ user: getSessionUser(), ready: true });
+	}, []);
+
+	return state;
 }
 
 export function hasRole(role: string): boolean {

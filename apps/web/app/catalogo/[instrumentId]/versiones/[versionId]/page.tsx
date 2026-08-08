@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
-import { getSessionUser } from "@/lib/auth";
+import { useSessionUser } from "@/lib/auth";
 
 type OptionDraft = {
 	id?: string;
@@ -81,7 +81,7 @@ export default function VersionEditorPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
-	const user = getSessionUser();
+	const { user, ready } = useSessionUser();
 	const canManage =
 		user?.roles.includes("admin") || user?.roles.includes("psicologo");
 	const isAdmin = user?.roles.includes("admin") ?? false;
@@ -93,8 +93,9 @@ export default function VersionEditorPage() {
 		canManage && detail?.status === "published" && detail.source === "runtime";
 
 	useEffect(() => {
+		if (!ready) return;
 		if (!canManage) {
-			router.replace("/");
+			router.replace("/login");
 			return;
 		}
 		let cancelled = false;
@@ -117,7 +118,7 @@ export default function VersionEditorPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [params.versionId, canManage, router]);
+	}, [params.versionId, ready, canManage, router]);
 
 	function updateScale(orderIndex: number, patch: Partial<ScaleDraft>) {
 		setDetail((current) => {

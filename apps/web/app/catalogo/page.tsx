@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
-import { clearSession, getSessionUser } from "@/lib/auth";
+import { clearSession, useSessionUser } from "@/lib/auth";
 
 type InstrumentRow = {
 	instrument_id: string;
@@ -47,11 +47,12 @@ export default function CatalogListPage() {
 	const [filter, setFilter] = useState("all");
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
-	const user = getSessionUser();
+	const { user, ready } = useSessionUser();
 	const canManage =
 		user?.roles.includes("admin") || user?.roles.includes("psicologo");
 
 	useEffect(() => {
+		if (!ready) return;
 		if (!user) {
 			router.replace("/login");
 			return;
@@ -92,7 +93,7 @@ export default function CatalogListPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [page, filter, canManage, router]);
+	}, [page, filter, ready, user, canManage, router]);
 
 	function onLogout() {
 		clearSession();

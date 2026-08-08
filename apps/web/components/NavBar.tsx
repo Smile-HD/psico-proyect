@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { getSessionUser } from "@/lib/auth";
+import { useSessionUser } from "@/lib/auth";
 
 /**
  * TestPsico — top navigation.
@@ -11,7 +11,7 @@ import { getSessionUser } from "@/lib/auth";
  * navigation). The server remains the authority for every permission decision.
  */
 export default function NavBar() {
-	const user = getSessionUser();
+	const { user, ready } = useSessionUser();
 	const canManage =
 		user?.roles.includes("admin") || user?.roles.includes("psicologo");
 
@@ -29,15 +29,17 @@ export default function NavBar() {
 			{canManage ? (
 				<Link href="/catalogo">Catálogo de instrumentos</Link>
 			) : null}
-			{user ? (
-				<span style={{ marginLeft: "1rem", color: "#666" }}>
-					{user.username}
-				</span>
-			) : (
-				<Link href="/login" style={{ marginLeft: "1rem" }}>
-					Iniciar sesión
-				</Link>
-			)}
+			{ready ? (
+				user ? (
+					<span style={{ marginLeft: "1rem", color: "#666" }}>
+						{user.username}
+					</span>
+				) : (
+					<Link href="/login" style={{ marginLeft: "1rem" }}>
+						Iniciar sesión
+					</Link>
+				)
+			) : null}
 		</nav>
 	);
 }

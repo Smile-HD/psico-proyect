@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
-import { getSessionUser } from "@/lib/auth";
+import { useSessionUser } from "@/lib/auth";
 
 type CreateResponse = {
 	instrument: { id: string };
@@ -17,7 +17,7 @@ export default function NewInstrumentPage() {
 	const [description, setDescription] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
-	const user = getSessionUser();
+	const { user, ready } = useSessionUser();
 	const canManage =
 		user?.roles.includes("admin") || user?.roles.includes("psicologo");
 
@@ -59,7 +59,7 @@ export default function NewInstrumentPage() {
 		}
 	}
 
-	if (!canManage) {
+	if (ready && !canManage) {
 		return (
 			<p style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
 				No tiene permisos para esta sección.

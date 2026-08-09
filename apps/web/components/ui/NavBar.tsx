@@ -20,9 +20,17 @@ export default function NavBar({ className, onLogout }: NavBarProps) {
 	const canManage =
 		ready &&
 		(user?.roles.includes("admin") || user?.roles.includes("psicologo"));
+	const canRunSessions = Boolean(
+		ready &&
+		user?.roles.some(
+			(role) => role === "admin" || role === "psicólogo" || role === "psicologo" || role === "evaluado",
+		),
+	);
 	const isHomeActive = pathname === "/";
 	const isCatalogActive =
 		pathname === "/catalogo" || pathname.startsWith("/catalogo/");
+	const isEvaluationActive =
+		pathname === "/evaluacion" || pathname.startsWith("/evaluacion/");
 
 	useEffect(() => {
 		setMenuOpen(false);
@@ -85,10 +93,21 @@ export default function NavBar({ className, onLogout }: NavBarProps) {
 								href="/"
 								aria-current={isHomeActive ? "page" : undefined}
 							>
-								Estado del servicio
-							</Link>
-						</li>
-						{canManage ? (
+									Estado del servicio
+								</Link>
+							</li>
+							{canRunSessions ? (
+								<li>
+									<Link
+										className={styles.navLink}
+										href="/evaluacion"
+										aria-current={isEvaluationActive ? "page" : undefined}
+									>
+										Evaluación
+									</Link>
+								</li>
+							) : null}
+							{canManage ? (
 							<li>
 								<Link
 									className={styles.navLink}

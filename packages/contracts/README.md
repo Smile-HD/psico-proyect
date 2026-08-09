@@ -197,3 +197,54 @@ freezing rule (published versions never change; a new version is a new id);
 and stable errors for draft/archived/missing/invalid versions. F4 consumes
 the item ↔ scale ↔ option relationship with the server-side 1–5 mapping via
 a non-public fixture projection.
+
+### 7.6 Evaluation sessions (F3)
+
+F3 owns the consent-gated session lifecycle and response persistence. The web
+client uses option identifiers and labels only; scoring and result computation
+belong to F4.
+
+#### 7.6.1 Endpoint surface
+
+All session paths are under `/api/v1/sessions`. Protected routes allow `admin`,
+`psicólogo`, and `evaluado`, with session reads and writes scoped to the owner
+except for the documented admin operational override.
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /catalog/published-versions` | Discovery-safe published summaries: identifiers and labels only. |
+| `POST /sessions` | Start an `in_progress` session for a published version. |
+| `GET /sessions` | List the caller's sessions. |
+| `GET /sessions/{session_id}` | Read status, progress, pinned projection, and owner answers as option IDs. |
+| `PUT /sessions/{session_id}/responses` | Atomically upsert a batch of `item_id`/`response_option_id` pairs. |
+| `POST /sessions/{session_id}/complete` | Complete after every required item has an answer. |
+
+#### 7.6.2 Published-only gate and no-leak behavior
+
+Session creation checks the published-version gate before consent. Missing,
+malformed, draft, archived, and unknown `instrument_version_id` values all
+return the same `NOT_FOUND` / `resource_not_found` envelope. The response does
+not disclose whether a non-published version exists, and the rejected request
+creates neither a session row nor a session audit event. A valid published
+request without a granted consent returns `CONFLICT` / `consent_required` and
+records only the existing `session.blocked_without_consent` audit event.
+
+#### 7.6.3 Mutation idempotency
+
+`POST /sessions`, `PUT /sessions/{session_id}/responses`, and
+`POST /sessions/{session_id}/complete` require `Idempotency-Key`. The existing
+consent mutations also require it:
+`POST /consent/{version_id}/grant` and `POST /consent/{version_id}/revoke`.
+One key represents one intent; a retry with the same body replays the original
+result without duplicate rows or audit events. Reusing a key with a different
+body returns `CONFLICT` / `idempotency_key_reused` and has no side effect.
+
+#### 7.6.4 Labels-only and no-scoring boundary
+
+Published discovery and session projections expose human-facing labels and
+stable identifiers. Response options are submitted and returned as
+`response_option_id`; the server owns the private option-to-value mapping.
+Numeric option values, answer keys, scores, percentiles, transformed results,
+and reference-set results MUST NOT cross the public API or appear in the web
+UI. F4 may consume the private mapping later; F3 completion returns lifecycle
+state only.

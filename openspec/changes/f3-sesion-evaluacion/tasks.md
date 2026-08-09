@@ -50,8 +50,8 @@ Chain strategy: stacked-to-main
 
 ## Cross-cutting gates
 
-- [ ] **T5.1** — Idempotency-Key sweep: create/responses/complete/grant/revoke pinned: replay/conflict. [F3]
-- [ ] **T5.2** — Full suite twice + `npm run build` green pre-archive. <!-- sdd-owner: parent -->
+- [x] **T5.1** — Idempotency-Key sweep: create/responses/complete/grant/revoke pinned: replay/conflict. [F3]
+- [x] **T5.2** — Full suite twice + `npm run build` green pre-archive. <!-- sdd-owner: parent -->
 
 ## PR 5 · Slice 5: UX port
 

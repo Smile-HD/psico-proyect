@@ -54,6 +54,7 @@
 - `cc898a9 feat(web): add consent and active session helpers`
 - `fb6fd1d feat(web): port evaluation session wizard`
 - `3c0bfaa feat(web): add inline consent and session resume`
+- `8229543 docs(sdd): record evaluation UX slice progress`
 
 ## Remaining Tasks
 

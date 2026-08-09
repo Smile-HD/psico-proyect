@@ -67,6 +67,7 @@ export default function SessionPage() {
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const headingRef = useRef<HTMLHeadingElement>(null);
 	const focusedRef = useRef(false);
+	const completionKeyRef = useRef<string | null>(null);
 	useEffect(() => {
 		if (!ready) return;
 		if (!user) {
@@ -183,10 +184,14 @@ export default function SessionPage() {
 			return;
 		}
 		try {
-			const result = await completeSession(getToken() ?? "", params.id, newIntentKey());
+			const completionKey = completionKeyRef.current ?? newIntentKey();
+			completionKeyRef.current = completionKey;
+			const result = await completeSession(getToken() ?? "", params.id, completionKey);
+			completionKeyRef.current = null;
 			setSession((current) => (current ? { ...current, status: result.status } : current));
 		} catch (error) {
 			const mapped = mapSessionError(error);
+			if (mapped.kind === "validation") completionKeyRef.current = null;
 			setCompletionError(
 				mapped.kind === "validation"
 					? "Aún faltan respuestas obligatorias. Revise los ítems marcados."

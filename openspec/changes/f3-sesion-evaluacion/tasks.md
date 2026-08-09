@@ -31,9 +31,9 @@ Chain strategy: stacked-to-main
 
 ## PR 2 · Slice 2: session API wiring
 
-- [ ] **T2.1** — `schemas/sessions.py`: StartRequest, batch DTO (option ids only), summary/detail — numeric-free. [F3]
-- [ ] **T2.2** — Rewrite `api/routes/sessions.py`: adapters; `Idempotency-Key` on all mutations; four invalid ids → identical `NOT_FOUND`; own-session 403 (admin exempt); wire router. [F3]
-- [ ] **T2.3** — `tests/test_session_api.py` (TestClient+PostgreSQL): handoff no-leak, gate-before-consent, own scope, foreign 403, upsert 1–5 mapping, foreign-item reject, required blocked, aggregate-only audit, no scoring, archival survival, replay/conflict. [F3]
+- [x] **T2.1** — `schemas/sessions.py`: StartRequest, batch DTO (option ids only), summary/detail — numeric-free. [F3]
+- [x] **T2.2** — Rewrite `api/routes/sessions.py`: adapters; `Idempotency-Key` on all mutations; four invalid ids → identical `NOT_FOUND`; own-session 403 (admin exempt); wire router. [F3]
+- [x] **T2.3** — `tests/test_session_api.py` (TestClient+PostgreSQL): handoff no-leak, gate-before-consent, own scope, foreign 403, upsert 1–5 mapping, foreign-item reject, required blocked, aggregate-only audit, no scoring, archival survival, replay/conflict. [F3]
 
 ## PR 3 · Slice 3: listing + consent retrofit (F2/F1 touchpoints)
 

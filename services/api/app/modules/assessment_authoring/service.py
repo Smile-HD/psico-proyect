@@ -54,6 +54,8 @@ from app.schemas.catalog import (
     PublishedOptionRead,
     PublishedScaleRead,
     PublishedVersionRead,
+    PublishedVersionSummary,
+    PublishedVersionsResponse,
     SaveDraftContentRequest,
     VersionSummary,
 )
@@ -743,6 +745,21 @@ class CatalogService:
             locale="es",
             adaptation=version.adaptation_metadata,
             scales=scales,
+        )
+
+    def published_list(self, db: Session) -> PublishedVersionsResponse:
+        """Return discovery-safe summaries for published versions only."""
+
+        return PublishedVersionsResponse(
+            versions=[
+                PublishedVersionSummary(
+                    instrument_version_id=version.id,
+                    instrument_key=version.instrument.key,
+                    title=version.instrument.title,
+                    version_no=version.version_no,
+                )
+                for version in self.repository.list_published_versions(db)
+            ]
         )
 
     def admin_list(

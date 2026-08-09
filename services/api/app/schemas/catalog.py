@@ -214,6 +214,24 @@ class PublishedVersionRead(CatalogModel):
     scales: list[PublishedScaleRead]
 
 
+class PublishedVersionSummary(CatalogModel):
+    """Public discovery row for one published instrument version.
+
+    The listing intentionally contains only stable identifiers and human-facing
+    labels. The full evaluator projection remains behind the version-specific
+    published-read endpoint, and never exposes option values here.
+    """
+
+    instrument_version_id: UUID
+    instrument_key: str
+    title: str
+    version_no: int
+
+
+class PublishedVersionsResponse(CatalogModel):
+    versions: list[PublishedVersionSummary]
+
+
 class AdminListRow(VersionSummary):
     """Version row enriched with instrument identity for the authoring list.
 

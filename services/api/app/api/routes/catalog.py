@@ -17,6 +17,7 @@ from app.modules.assessment_authoring.service import service
 from app.schemas.catalog import (
     CreateDraftVersionRequest,
     CreateInstrumentRequest,
+    PublishedVersionsResponse,
     SaveDraftContentRequest,
 )
 
@@ -43,6 +44,14 @@ def published_version_read(
     db: Session = Depends(get_db),
 ):
     return service.published_read(db, _uuid_or_not_found(version_id))
+
+
+@router.get("/published-versions", response_model=PublishedVersionsResponse)
+def published_versions(
+    _user=Depends(require_roles(ADMIN, PSICOLOGO, EVALUADO)),
+    db: Session = Depends(get_db),
+) -> PublishedVersionsResponse:
+    return service.published_list(db)
 
 
 @router.get("/admin/instruments")

@@ -74,6 +74,17 @@ class CatalogRepository:
         return list(db.scalars(base).all()), int(db.scalar(count_statement) or 0)
 
     @staticmethod
+    def list_published_versions(db: Session) -> list[InstrumentVersion]:
+        statement = (
+            select(InstrumentVersion)
+            .join(Instrument)
+            .where(InstrumentVersion.status == "published")
+            .options(selectinload(InstrumentVersion.instrument))
+            .order_by(Instrument.key, InstrumentVersion.version_no)
+        )
+        return list(db.scalars(statement).all())
+
+    @staticmethod
     def create_instrument(
         db: Session,
         *,

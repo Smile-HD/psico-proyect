@@ -172,6 +172,12 @@ export default function SessionPage() {
 		setAnswers(next);
 		setCompletionError("");
 		setSaveStatus("idle");
+		const failed = failedRef.current;
+		if (failed && failed.responses[0]?.item_id !== itemId) {
+			failedRef.current = null;
+			queueRef.current.unshift(failed);
+			void ensureDrain();
+		}
 
 		let intent = pendingRef.current;
 		if (intent && intent.responses[0]?.item_id !== itemId) {

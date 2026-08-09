@@ -1,7 +1,7 @@
 .page {
 	display: grid;
 	gap: var(--space-6);
-	max-width: 75rem;
+	max-width: 50rem;
 	margin: 0 auto;
 	padding: var(--space-6) var(--space-4) var(--space-12);
 }
@@ -26,14 +26,8 @@
 }
 
 .intro,
-.actions p {
+.requiredHint {
 	color: var(--color-ink-2);
-}
-
-.scale {
-	display: grid;
-	gap: var(--space-4);
-	min-width: 0;
 }
 
 .feedback {
@@ -47,20 +41,118 @@
 	flex: 1 1 18rem;
 }
 
-.actions {
+.progress {
 	display: grid;
-	gap: var(--space-4);
-	padding-top: var(--space-5);
-	border-top: 1px solid var(--color-border);
+	gap: var(--space-2);
+}
+
+.progressLabel {
+	color: var(--color-ink-2);
+	font-size: var(--font-size-supporting);
+	font-variant-numeric: tabular-nums;
+}
+
+.progressBar {
+	height: 0.375rem;
+	width: 100%;
+	overflow: hidden;
+	border-radius: var(--radius-sm);
+	background: var(--color-border);
+}
+
+.progressBar span {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--color-accent);
+	transition: width var(--motion-standard) var(--ease-standard);
+}
+
+.itemCard,
+.complete {
+	display: grid;
+	gap: var(--space-5);
+	padding: var(--space-6);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+	background: var(--color-surface);
+	box-shadow: var(--shadow-subtle);
+}
+
+.itemHeading {
+	font-size: var(--font-size-heading-2);
+}
+
+.required {
+	color: var(--color-ink-2);
+	font-size: var(--font-size-supporting);
+	font-weight: 400;
+}
+
+.options {
+	display: grid;
+	gap: var(--space-2);
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.option {
+	display: flex;
+	min-height: 2.75rem;
+	align-items: center;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-4);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	transition:
+		background-color var(--motion-fast) var(--ease-standard),
+		border-color var(--motion-fast) var(--ease-standard);
+}
+
+.option:hover,
+.option[data-selected="true"] {
+	border-color: var(--color-accent);
+	background: var(--color-canvas);
+}
+
+.radio {
+	width: 1.25rem;
+	height: 1.25rem;
+	margin: 0;
+	accent-color: var(--color-accent);
+	flex: 0 0 auto;
+}
+
+.optionMarker {
+	display: none;
+}
+
+.requiredHint {
+	font-size: var(--font-size-supporting);
+}
+
+.actions {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--space-3);
+	padding-top: var(--space-2);
 }
 
 .complete {
-	display: grid;
-	gap: var(--space-3);
-	padding: var(--space-6);
-	border: 1px solid var(--color-success);
-	border-radius: var(--radius-md);
-	background: var(--color-surface);
+	border-color: var(--color-success);
+}
+
+.visuallyHidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
 }
 
 @media (min-width: 48rem) {
@@ -68,14 +160,25 @@
 		padding-inline: var(--space-8);
 	}
 
+	.itemCard,
+	.complete {
+		padding: var(--space-8);
+	}
+}
+
+@media (max-width: 36rem) {
 	.actions {
-		grid-template-columns: 1fr auto;
-		align-items: center;
+		flex-direction: column-reverse;
+	}
+
+	.actions button {
+		width: 100%;
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.page {
-		scroll-behavior: auto;
+	.progressBar span,
+	.option {
+		transition: none;
 	}
 }

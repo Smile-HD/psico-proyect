@@ -3,48 +3,51 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import Button from "@/components/ui/Button";
 import { ErrorState, Notice } from "@/components/ui/Feedback";
-import LikertMatrix, { type LikertItem } from "@/components/ui/LikertMatrix";
 import Skeleton from "@/components/ui/Skeleton";
 import { getToken, useSessionUser } from "@/lib/auth";
 import {
+	clearActiveSessionId,
 	completeSession,
+	getActiveSessionId,
 	getSession,
 	mapSessionError,
 	newIntentKey,
 	saveSessionResponses,
+	storeActiveSessionId,
 	type SessionDetail,
 	type SessionItem,
 	type SessionResponseInput,
 } from "@/lib/session-api";
+
 import styles from "./page.module.css";
 
 const SAVE_DELAY = 700;
 type Answers = Record<string, string>;
 type SaveIntent = { key: string; responses: SessionResponseInput[] };
 
-function matrixItems(items: SessionItem[]): LikertItem[] {
-	return items.map((item) => ({ id: item.id, order: item.item_order, text: item.text, required: item.required, options: item.response_options.map((option) => ({ id: option.id, order: option.display_order, label: option.label })) }));
+function sessionItems(detail: SessionDetail): SessionItem[] {
+	return (detail.projection?.scales ?? [])
+		.slice()
+		.sort((a, b) => a.display_order - b.display_order)
+		.flatMap((scale) =>
+			scale.items.slice().sort((a, b) => a.item_order - b.item_order),
+		);
 }
 
 function initialAnswers(detail: SessionDetail): Answers {
-	return Object.fromEntries((detail.projection?.scales.flatMap((scale) => scale.items) ?? []).filter((item) => item.response_option_id).map((item) => [item.id, item.response_option_id as string]));
+	return Object.fromEntries(
+		sessionItems(detail)
+			.filter((item) => item.response_option_id)
+			.map((item) => [item.id, item.response_option_id as string]),
+	);
 }
 
-function responsePayload(answers: Answers): SessionResponseInput[] {
-	return Object.entries(answers).map(([item_id, response_option_id]) => ({ item_id, response_option_id }));
-}
-
-function requiredMissing(items: SessionItem[], answers: Answers) { return items.filter((item) => item.required && !answers[item.id]); }
-
-function focusItem(item: SessionItem | undefined) {
-	if (!item) return;
-	requestAnimationFrame(() => {
-		const input = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="radio"]')).find((candidate) => candidate.getAttribute("aria-label")?.startsWith(`${item.text}:`));
-		input?.focus();
-	});
+function requiredMissing(items: SessionItem[], answers: Answers): SessionItem[] {
+	return items.filter((item) => item.required && !answers[item.id]);
 }
 
 export default function SessionPage() {
@@ -53,6 +56,7 @@ export default function SessionPage() {
 	const { user, ready } = useSessionUser();
 	const [session, setSession] = useState<SessionDetail | null>(null);
 	const [answers, setAnswers] = useState<Answers>({});
+	const [currentIndex, setCurrentIndex] = useState(0);
 	const [loadError, setLoadError] = useState(false);
 	const [reloadKey, setReloadKey] = useState(0);
 	const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -65,15 +69,16 @@ export default function SessionPage() {
 	const queueRef = useRef<SaveIntent[]>([]);
 	const drainRef = useRef<Promise<void> | null>(null);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const headingRef = useRef<HTMLHeadingElement>(null);
-	const focusedRef = useRef(false);
+	const itemHeadingRef = useRef<HTMLHeadingElement>(null);
 	const completionKeyRef = useRef<string | null>(null);
+
 	useEffect(() => {
 		if (!ready) return;
 		if (!user) {
 			router.replace("/login");
 			return;
 		}
+
 		let cancelled = false;
 		setSession(null);
 		setLoadError(false);
@@ -83,23 +88,39 @@ export default function SessionPage() {
 				const restored = initialAnswers(data);
 				answersRef.current = restored;
 				setAnswers(restored);
+				const items = sessionItems(data);
+				const firstUnanswered = items.findIndex((item) => !restored[item.id]);
+				setCurrentIndex(firstUnanswered >= 0 ? firstUnanswered : 0);
+				if (data.status === "completed") {
+					if (getActiveSessionId() === params.id) clearActiveSessionId();
+				} else {
+					storeActiveSessionId(params.id);
+				}
 				setSession(data);
 			})
-			.catch(() => {
-				if (!cancelled) setLoadError(true);
+			.catch((error) => {
+				if (cancelled) return;
+				const mapped = mapSessionError(error);
+				if (
+					(mapped.kind === "not_found" || mapped.kind === "forbidden") &&
+					getActiveSessionId() === params.id
+				) {
+					clearActiveSessionId();
+				}
+				setLoadError(true);
 			});
 		return () => {
 			cancelled = true;
 			if (timerRef.current) clearTimeout(timerRef.current);
 		};
 	}, [params.id, ready, reloadKey, router, user]);
+
 	useEffect(() => {
-		if (session && !focusedRef.current) {
-			focusedRef.current = true;
-			requestAnimationFrame(() => headingRef.current?.focus());
-		}
-	}, [session]);
-	async function saveIntent(intent: SaveIntent) {
+		if (!session || session.status === "completed") return;
+		requestAnimationFrame(() => itemHeadingRef.current?.focus());
+	}, [currentIndex, session]);
+
+	async function saveIntent(intent: SaveIntent): Promise<boolean> {
 		setSaveStatus("saving");
 		try {
 			await saveSessionResponses(getToken() ?? "", params.id, intent.responses, intent.key);
@@ -115,13 +136,15 @@ export default function SessionPage() {
 			return false;
 		}
 	}
-	async function drainQueue() {
+
+	async function drainQueue(): Promise<void> {
 		while (queueRef.current.length) {
 			const next = queueRef.current.shift();
 			if (!next || !(await saveIntent(next))) break;
 		}
 	}
-	function ensureDrain() {
+
+	function ensureDrain(): Promise<void> {
 		if (!drainRef.current) {
 			drainRef.current = drainQueue().finally(() => {
 				drainRef.current = null;
@@ -129,29 +152,39 @@ export default function SessionPage() {
 		}
 		return drainRef.current;
 	}
-	function queueIntent(intent: SaveIntent) {
+
+	function queueIntent(intent: SaveIntent): void {
 		queueRef.current.push(intent);
 		void ensureDrain();
 	}
-	function flushPending() {
+
+	function flushPending(): Promise<void> {
 		if (timerRef.current) clearTimeout(timerRef.current);
 		const pending = pendingRef.current;
 		pendingRef.current = null;
 		if (pending) queueRef.current.push(pending);
 		return ensureDrain();
 	}
-	function changeAnswer(itemId: string, optionId: string) {
+
+	function changeAnswer(itemId: string, optionId: string): void {
 		const next = { ...answersRef.current, [itemId]: optionId };
 		answersRef.current = next;
 		setAnswers(next);
 		setCompletionError("");
 		setSaveStatus("idle");
+
 		let intent = pendingRef.current;
+		if (intent && intent.responses[0]?.item_id !== itemId) {
+			pendingRef.current = null;
+			if (timerRef.current) clearTimeout(timerRef.current);
+			queueIntent(intent);
+			intent = null;
+		}
 		if (!intent) {
 			intent = { key: newIntentKey(), responses: [] };
 			pendingRef.current = intent;
 		}
-		intent.responses = responsePayload(next);
+		intent.responses = [{ item_id: itemId, response_option_id: optionId }];
 		if (timerRef.current) clearTimeout(timerRef.current);
 		timerRef.current = setTimeout(() => {
 			const readyIntent = pendingRef.current;
@@ -159,22 +192,31 @@ export default function SessionPage() {
 			if (readyIntent) queueIntent(readyIntent);
 		}, SAVE_DELAY);
 	}
-	function retrySave() {
+
+	function retrySave(): void {
 		const failed = failedRef.current;
 		if (!failed) return;
 		failedRef.current = null;
 		queueRef.current.unshift(failed);
 		void ensureDrain();
 	}
-	async function complete() {
+
+	function moveToItem(index: number): void {
+		setCurrentIndex(index);
+		setCompletionError("");
+	}
+
+	async function complete(): Promise<void> {
 		if (!session || completing) return;
-		const items = session.projection?.scales.flatMap((scale) => scale.items) ?? [];
+		const items = sessionItems(session);
 		const missing = requiredMissing(items, answersRef.current);
 		if (missing.length) {
 			setCompletionError("Responda los ítems marcados como obligatorios antes de completar.");
-			focusItem(missing[0]);
+			const missingIndex = items.findIndex((item) => item.id === missing[0].id);
+			if (missingIndex >= 0) setCurrentIndex(missingIndex);
 			return;
 		}
+
 		setCompleting(true);
 		setCompletionError("");
 		await flushPending();
@@ -188,20 +230,26 @@ export default function SessionPage() {
 			completionKeyRef.current = completionKey;
 			const result = await completeSession(getToken() ?? "", params.id, completionKey);
 			completionKeyRef.current = null;
+			if (getActiveSessionId() === params.id) clearActiveSessionId();
 			setSession((current) => (current ? { ...current, status: result.status } : current));
 		} catch (error) {
 			const mapped = mapSessionError(error);
 			if (mapped.kind === "validation") completionKeyRef.current = null;
 			setCompletionError(
 				mapped.kind === "validation"
-					? "Aún faltan respuestas obligatorias. Revise los ítems marcados."
+					? "Aún faltan respuestas obligatorias. Revise el ítem marcado."
 					: mapped.message,
 			);
-			if (mapped.kind === "validation") focusItem(requiredMissing(items, answersRef.current)[0]);
+			if (mapped.kind === "validation") {
+				const serverMissing = requiredMissing(items, answersRef.current);
+				const missingIndex = items.findIndex((item) => item.id === serverMissing[0]?.id);
+				if (missingIndex >= 0) setCurrentIndex(missingIndex);
+			}
 		} finally {
 			setCompleting(false);
 		}
 	}
+
 	if (!ready || !user || (!session && !loadError)) {
 		return <Skeleton variant="block" label="Cargando la evaluación…" />;
 	}
@@ -218,12 +266,15 @@ export default function SessionPage() {
 		);
 	}
 
-	const projection = session.projection;
+	const items = sessionItems(session);
+	const currentItem = items[currentIndex];
+	const answeredCount = Object.keys(answers).length;
+	const isLastItem = currentIndex === items.length - 1;
 	const saveMessage =
 		saveStatus === "saving"
-			? "Guardando respuestas…"
+			? "Guardando respuesta…"
 			: saveStatus === "saved"
-				? "Respuestas guardadas."
+				? "Respuesta guardada."
 				: saveError;
 
 	return (
@@ -231,7 +282,7 @@ export default function SessionPage() {
 			<Breadcrumb items={[{ label: "Evaluaciones", href: "/evaluacion" }, { label: "Sesión", current: true }]} />
 			<header className={styles.header}>
 				<p className={styles.eyebrow}>Evaluación</p>
-				<h1 ref={headingRef} tabIndex={-1}>Completar evaluación</h1>
+				<h1>Completar evaluación</h1>
 				<p className={styles.intro}>Seleccione una etiqueta por cada ítem. Sus respuestas se guardan automáticamente.</p>
 			</header>
 
@@ -248,25 +299,76 @@ export default function SessionPage() {
 					<h2 id="completed-heading">Evaluación completada</h2>
 					<p>Sus respuestas fueron registradas. Esta etapa no muestra puntuaciones ni resultados.</p>
 				</section>
-			) : (
+			) : currentItem ? (
 				<>
-					{projection.scales.map((scale) => (
-						<section className={styles.scale} key={scale.id} aria-labelledby={`scale-${scale.id}`}>
-							<h2 id={`scale-${scale.id}`}>{scale.label}</h2>
-							<LikertMatrix
-								caption={`${scale.label} — opciones de respuesta`}
-								items={matrixItems(scale.items)}
-								interactive
-								valueByItem={answers}
-								onChange={changeAnswer}
-							/>
-						</section>
-					))}
-					<footer className={styles.actions}>
-						<p>Los ítems marcados como <strong>obligatorios</strong> deben tener una respuesta.</p>
-						<Button type="button" busy={completing} pendingLabel="Completando…" onClick={complete}>Completar evaluación</Button>
-					</footer>
+					<section className={styles.progress} aria-label="Progreso de la evaluación">
+						<p className={styles.progressLabel} aria-live="polite">
+							Ítem {currentIndex + 1} de {items.length}
+							<span> · {answeredCount} respondido{answeredCount === 1 ? "" : "s"}</span>
+						</p>
+						<div
+							className={styles.progressBar}
+							role="progressbar"
+							aria-label="Avance de la evaluación"
+							aria-valuenow={currentIndex + 1}
+							aria-valuemin={1}
+							aria-valuemax={items.length}
+						>
+							<span style={{ width: `${((currentIndex + 1) / items.length) * 100}%` }} />
+						</div>
+					</section>
+
+					<section className={styles.itemCard} aria-labelledby={`item-${currentItem.id}`}>
+						<h2 id={`item-${currentItem.id}`} ref={itemHeadingRef} tabIndex={-1} className={styles.itemHeading}>
+							{currentItem.text}
+							{currentItem.required ? <span className={styles.required}> (obligatorio)</span> : null}
+						</h2>
+						<fieldset className={styles.options} aria-required={currentItem.required || undefined}>
+							<legend className={styles.visuallyHidden}>Seleccione una opción para este ítem</legend>
+							{currentItem.response_options
+								.slice()
+								.sort((a, b) => a.display_order - b.display_order)
+								.map((option) => {
+									const selected = answers[currentItem.id] === option.id;
+									return (
+										<label className={styles.option} data-selected={selected} key={option.id}>
+											<input
+												className={styles.radio}
+												type="radio"
+												name={`item-${currentItem.id}`}
+												value={option.id}
+												checked={selected}
+												aria-label={`${currentItem.text}: ${option.label}`}
+												onChange={(event) => {
+													if (event.target.checked) changeAnswer(currentItem.id, option.id);
+												}}
+											/>
+											<span className={styles.optionMarker} aria-hidden="true" />
+											<span>{option.label}</span>
+										</label>
+									);
+								})}
+						</fieldset>
+						<p className={styles.requiredHint}>Los ítems marcados como <strong>obligatorios</strong> deben tener una respuesta.</p>
+					</section>
+
+					<nav className={styles.actions} aria-label="Navegación entre ítems">
+						<Button type="button" variant="secondary" onClick={() => moveToItem(currentIndex - 1)} disabled={currentIndex === 0}>
+							Anterior
+						</Button>
+						{isLastItem ? (
+							<Button type="button" busy={completing} pendingLabel="Completando…" onClick={complete}>
+								Completar evaluación
+							</Button>
+						) : (
+							<Button type="button" onClick={() => moveToItem(currentIndex + 1)}>
+								Siguiente
+							</Button>
+						)}
+					</nav>
 				</>
+			) : (
+				<Notice tone="warning" role="alert" message="Esta evaluación no contiene ítems disponibles." />
 			)}
 		</div>
 	);

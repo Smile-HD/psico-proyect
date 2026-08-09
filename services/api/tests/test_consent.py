@@ -37,8 +37,11 @@ def _login(client: TestClient, username: str) -> str:
     ).json()["access_token"]
 
 
-def _auth(token: str) -> dict:
-    return {"Authorization": f"Bearer {token}"}
+def _auth(token: str, key: str | None = None) -> dict:
+    headers = {"Authorization": f"Bearer {token}"}
+    if key is not None:
+        headers["Idempotency-Key"] = key
+    return headers
 
 
 def _audit_event_count(db_session, event_type: str) -> int:
@@ -60,7 +63,7 @@ def test_session_blocked_without_consent(client, seeded_db_session, db_session) 
     resp = client.post(
         "/api/v1/sessions",
         json={"instrument_version_id": version_id},
-        headers=_auth(token),
+        headers=_auth(token, "consent-session-blocked"),
     )
     assert resp.status_code == 409
     body = resp.json()
@@ -85,7 +88,7 @@ def test_grant_then_session_starts(client, seeded_db_session, db_session) -> Non
     resp = client.post(
         "/api/v1/sessions",
         json={"instrument_version_id": version_id},
-        headers=_auth(token),
+        headers=_auth(token, "consent-session-start"),
     )
     assert resp.status_code == 201
     assert resp.json()["status"] == "in_progress"
@@ -133,7 +136,7 @@ def test_session_blocked_again_after_revoke(client, seeded_db_session, db_sessio
     resp = client.post(
         "/api/v1/sessions",
         json={"instrument_version_id": version_id},
-        headers=_auth(token),
+        headers=_auth(token, "consent-session-revoked"),
     )
     assert resp.status_code == 409
     assert resp.json()["error"]["code"] == "CONFLICT"

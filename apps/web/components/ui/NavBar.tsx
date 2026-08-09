@@ -93,21 +93,21 @@ export default function NavBar({ className, onLogout }: NavBarProps) {
 								href="/"
 								aria-current={isHomeActive ? "page" : undefined}
 							>
-									Estado del servicio
+								Estado del servicio
+							</Link>
+						</li>
+						{canRunSessions ? (
+							<li>
+								<Link
+									className={styles.navLink}
+									href="/evaluacion"
+									aria-current={isEvaluationActive ? "page" : undefined}
+								>
+									Evaluación
 								</Link>
 							</li>
-							{canRunSessions ? (
-								<li>
-									<Link
-										className={styles.navLink}
-										href="/evaluacion"
-										aria-current={isEvaluationActive ? "page" : undefined}
-									>
-										Evaluación
-									</Link>
-								</li>
-							) : null}
-							{canManage ? (
+						) : null}
+						{canManage ? (
 							<li>
 								<Link
 									className={styles.navLink}

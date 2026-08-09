@@ -25,7 +25,7 @@ Chain strategy: stacked-to-main
 ## PR 1 · Slice 1: session_runtime core
 
 - [x] **T1.1** — `session_runtime/domain.py`: `transition()` (`in_progress→completed` only), `required_missing()`, `validate_batch()` (foreign-item reject), option-id→1–5 mapping. RED `test_session_domain.py`. [F3]
-- [ ] **T1.2** — `session_runtime/errors.py`: factories for `resource_not_found`, `consent_required`, `idempotency_key_reused`, `validation_error`, `forbidden`, state-`CONFLICT`. [F3]
+- [x] **T1.2** — `session_runtime/errors.py`: factories for `resource_not_found`, `consent_required`, `idempotency_key_reused`, `validation_error`, `forbidden`, state-`CONFLICT`. [F3]
 - [ ] **T1.3** — `session_runtime/repository.py`: `FOR UPDATE` locks; pinned re-projection (archived OK, values hidden); upsert on `UNIQUE(session_id,item_id)`. RED `test_session_repository.py`. Done: one row on re-save. [F3]
 - [ ] **T1.4** — `session_runtime/service.py`: create (gate→consent, actor key), own list, detail (owner/admin), batch save (`session:{id}` key, no audit), complete (required check, `response_count` audit, admin override). RED `test_session_service.py`. Done: retries dedupe. [F3]
 

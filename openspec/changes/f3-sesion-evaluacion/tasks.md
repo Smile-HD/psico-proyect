@@ -42,7 +42,7 @@ Chain strategy: stacked-to-main
 
 ## PR 4 · Slice 4: web UI
 
-- [ ] **T4.1** — `apps/web/lib/session-api.ts`: client on `apiFetch` (list/create/detail/save/complete), per-intent keys, `consent_required` mapping, no numeric-value types. [F3]
+- [x] **T4.1** — `apps/web/lib/session-api.ts`: client on `apiFetch` (list/create/detail/save/complete), per-intent keys, `consent_required` mapping, no numeric-value types. [F3]
 - [ ] **T4.2** — `apps/web/app/evaluacion/page.tsx` + css: labels; start → create → redirect `sesiones/[id]`; consent state explained; neutral state on `NOT_FOUND`. [F3]
 - [ ] **T4.3** — `apps/web/app/evaluacion/sesiones/[id]/page.tsx` + css: resume pre-fill; LikertMatrix (aria-labels, focus); single-flight debounced autosave, `role="status"` feedback, retry keeps input; required markers; completion, no scores; reduced motion. [F3]
 - [ ] **T4.4** — `components/ui/NavBar.tsx`: "Evaluación" entry for auth users with `run_sessions` (incl. evaluado), active-route, hidden anonymous. [F3]

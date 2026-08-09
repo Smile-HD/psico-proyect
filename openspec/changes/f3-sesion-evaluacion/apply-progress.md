@@ -59,8 +59,9 @@
 
 ## Remaining Tasks
 
-- [ ] T5.1 — parent-owned idempotency sweep.
-- [ ] T5.2 — parent-owned full suite twice and final pre-archive build.
+- [x] T5.1 — parent-owned idempotency sweep (orchestrator, 2026-08-09).
+- [x] T5.2 — parent-owned full suite twice and final pre-archive build (orchestrator, 2026-08-09).
+- [x] Post-verify accessibility fix (orchestrator, 2026-08-09): completion confirmation section now carries `role="status"` so assistive tech announces it (commit `ac3a013`).
 
 ## Deviations and Issues
 

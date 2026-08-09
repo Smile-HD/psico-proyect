@@ -1,105 +1,91 @@
-"""Session endpoints — consent-gated (audit-consent spec).
-
-POST /sessions requires a granted consent for the caller; without it the
-request fails CONFLICT and session.blocked_without_consent is audited.
-"""
+"""Thin HTTP adapters for the consent-gated session runtime."""
 
 from __future__ import annotations
 
-import uuid
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, Header
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.core import audit
-from app.core.consent import require_consent
-from app.core.errors import ApiError, FORBIDDEN, NOT_FOUND
 from app.core.permissions import ADMIN, EVALUADO, PSICOLOGO, require_roles
 from app.db.session import get_db
-from app.models.instruments import InstrumentVersion
-from app.models.sessions import Response, Session
-from app.schemas.auth import SessionStartRequest
+from app.modules.session_runtime.service import service
+from app.schemas.sessions import (
+    BatchResponseRequest,
+    SessionCreatedResponse,
+    SessionDetail,
+    SessionListResponse,
+    SessionSaveResponse,
+    StartRequest,
+)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
+def _json_result(
+    model: type[BaseModel], status_code: int, payload: dict
+) -> JSONResponse:
+    """Validate service/replay payloads before returning the public DTO."""
+
+    body = model.model_validate(payload).model_dump(mode="json")
+    return JSONResponse(status_code=status_code, content=body)
+
+
 @router.post("", status_code=201)
 def create_session(
-    body: SessionStartRequest,
+    body: StartRequest,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     user=Depends(require_roles(ADMIN, PSICOLOGO, EVALUADO)),
     db: Session = Depends(get_db),
-) -> dict:
-    try:
-        version_id = uuid.UUID(body.instrument_version_id)
-    except ValueError:
-        raise ApiError(NOT_FOUND, "instrument_version_not_found")
-    version = db.get(InstrumentVersion, version_id)
-    if version is None:
-        raise ApiError(NOT_FOUND, "instrument_version_not_found")
+) -> JSONResponse:
+    status_code, payload = service.create_session(db, user, body, idempotency_key)
+    return _json_result(SessionCreatedResponse, status_code, payload)
 
-    grant = require_consent(db, user.id)  # raises CONFLICT + audit when absent
 
-    session = Session(
-        user_id=user.id,
-        instrument_version_id=version.id,
-        consent_grant_id=grant.id,
-        status="in_progress",
-        started_at=datetime.now(timezone.utc),
-        synthetic=False,
-        source="runtime",
-    )
-    db.add(session)
-    db.flush()
-    audit.record(
+@router.get("")
+def list_sessions(
+    user=Depends(require_roles(ADMIN, PSICOLOGO, EVALUADO)),
+    db: Session = Depends(get_db),
+) -> SessionListResponse:
+    return SessionListResponse.model_validate(service.list_sessions(db, user))
+
+
+@router.get("/{session_id}")
+def get_session(
+    session_id: str,
+    user=Depends(require_roles(ADMIN, PSICOLOGO, EVALUADO)),
+    db: Session = Depends(get_db),
+) -> SessionDetail:
+    return SessionDetail.model_validate(service.get_session(db, user, session_id))
+
+
+@router.put("/{session_id}/responses")
+def save_responses(
+    session_id: str,
+    body: BatchResponseRequest,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    user=Depends(require_roles(ADMIN, PSICOLOGO, EVALUADO)),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    status_code, payload = service.save_responses(
         db,
-        "session.started",
-        actor_user_id=user.id,
-        actor_role=",".join(user.roles),
-        resource_type="session",
-        resource_id=str(session.id),
-        action="create",
-        outcome="allowed",
-        metadata={},
-        commit=True,
+        user,
+        session_id,
+        body.model_dump(mode="python"),
+        idempotency_key,
     )
-    return {"id": str(session.id), "status": session.status}
+    return _json_result(SessionSaveResponse, status_code, payload)
 
 
 @router.post("/{session_id}/complete")
 def complete_session(
     session_id: str,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     user=Depends(require_roles(ADMIN, PSICOLOGO, EVALUADO)),
     db: Session = Depends(get_db),
-) -> dict:
-    try:
-        sid = uuid.UUID(session_id)
-    except ValueError:
-        raise ApiError(NOT_FOUND, "session_not_found")
-    session = db.get(Session, sid)
-    if session is None:
-        raise ApiError(NOT_FOUND, "session_not_found")
-    # Own-session rule: evaluados/psicólogos only their own sessions.
-    if session.user_id != user.id and ADMIN not in user.roles:
-        raise ApiError(FORBIDDEN, "insufficient_role")
-
-    response_count = db.scalar(
-        select(func.count()).select_from(Response).where(Response.session_id == session.id)
-    ) or 0
-    session.status = "completed"
-    session.completed_at = datetime.now(timezone.utc)
-    audit.record(
-        db,
-        "session.completed",
-        actor_user_id=user.id,
-        actor_role=",".join(user.roles),
-        resource_type="session",
-        resource_id=str(session.id),
-        action="complete",
-        outcome="allowed",
-        # Deny-list: counts only, never response values or item content.
-        metadata={"response_count": response_count},
-        commit=True,
+) -> JSONResponse:
+    status_code, payload = service.complete_session(
+        db, user, session_id, idempotency_key
     )
-    return {"id": str(session.id), "status": session.status}
+    # The ADMIN role remains an operational owner override inside the service.
+    return _json_result(SessionCreatedResponse, status_code, payload)

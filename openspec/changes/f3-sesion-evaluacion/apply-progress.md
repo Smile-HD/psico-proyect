@@ -40,7 +40,7 @@
 | Focused test command and exact result | `cd apps/web && npm run build` — **passed** after each implementation unit and at the end; TypeScript/build green and 8 routes generated. |
 | Runtime harness command/scenario and exact result | **N/A** — no browser/E2E runner is installed; owner manual checklist and code inspection cover keyboard navigation, focus, consent, resume cleanup, live status, contrast-token use, reduced motion, and no-score behavior. |
 | Full API suite command and exact result | `powershell -ExecutionPolicy Bypass -File scripts/test.ps1` — **147 passed, 2 failed, 61 warnings**; only the documented pre-existing `tests/test_web.py::test_page_is_spanish` and `tests/test_web.py::test_page_never_leaks_stack_trace` failures remain. |
-| Rollback boundary | Revert Slice 5 web commits `cc898a9`, `fb6fd1d`, and `3c0bfaa`, plus this task/progress artifact commit; this removes only consent/session-storage helpers, evaluator wizard/discovery UX, and Slice 5 tracking. Do not revert API slices, NavBar, contracts, or unrelated SDD artifacts. |
+| Rollback boundary | Revert Slice 5 web commits `cc898a9`, `fb6fd1d`, `3c0bfaa`, and `1e014ab`, plus the task/progress artifact commits; this removes only consent/session-storage helpers, evaluator wizard/discovery UX, failed-intent preservation, and Slice 5 tracking. Do not revert API slices, NavBar, contracts, or unrelated SDD artifacts. |
 
 ## Files Changed
 
@@ -54,6 +54,7 @@
 - `cc898a9 feat(web): add consent and active session helpers`
 - `fb6fd1d feat(web): port evaluation session wizard`
 - `3c0bfaa feat(web): add inline consent and session resume`
+- `1e014ab fix(web): preserve failed autosave intents`
 - `8229543 docs(sdd): record evaluation UX slice progress`
 
 ## Remaining Tasks
@@ -66,4 +67,5 @@
 - No API code, `LikertMatrix`, landing page, `NavBar`, `test_web.py`, contracts README, or `src/` structure was changed.
 - No numeric option values, scores, reference results, fake timer, or new audit event crosses the web surface.
 - Consent is rendered at the actual session-creation boundary (`/evaluacion`); the session detail route only reads an already-created session and therefore has no consent mutation to duplicate.
+- A failed autosave intent is re-queued before a later different-item intent starts, so local input remains retryable instead of being cleared by an unrelated success.
 - Web strict-TDD RED/GREEN execution could not use a web test runner because none is installed; the required build/manual verification path is explicit.

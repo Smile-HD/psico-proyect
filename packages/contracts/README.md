@@ -206,9 +206,9 @@ belong to F4.
 
 #### 7.6.1 Endpoint surface
 
-All session paths are under `/api/v1/sessions`. Protected routes allow `admin`,
-`psicólogo`, and `evaluado`, with session reads and writes scoped to the owner
-except for the documented admin operational override.
+All paths use the `/api/v1` prefix; session paths are under `/sessions`.
+Protected routes allow `admin`, `psicólogo`, and `evaluado`, with session reads
+and writes scoped to the owner except for the documented admin override.
 
 | Method and path | Purpose |
 | --- | --- |

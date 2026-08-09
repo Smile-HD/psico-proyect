@@ -52,3 +52,10 @@ Chain strategy: stacked-to-main
 
 - [ ] **T5.1** — Idempotency-Key sweep: create/responses/complete/grant/revoke pinned: replay/conflict. [F3]
 - [ ] **T5.2** — Full suite twice + `npm run build` green pre-archive. <!-- sdd-owner: parent -->
+
+## PR 5 · Slice 5: UX port
+
+- [x] **T5.3** — `apps/web/lib/session-api.ts`: add consent grant and active-session `sessionStorage` helpers without changing the ratified API payloads. [F3]
+- [x] **T5.4** — `apps/web/app/evaluacion/sesiones/[id]/page.tsx` + css: port the one-item wizard with progress, navigation, focus management, required validation, option-ID autosave, retry preservation, and score-free completion. [F3]
+- [x] **T5.5** — `apps/web/app/evaluacion/page.tsx` + css: add inline consent acceptance/retry and validated active-session resume with stale-storage cleanup. [F3]
+- [x] **T5.6** — UX accessibility pass: preserve Spanish copy, visible required markers, polite autosave status, reduced-motion tokens, and keyboard-operable radio controls. [F3]

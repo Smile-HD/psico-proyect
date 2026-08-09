@@ -37,8 +37,8 @@ Chain strategy: stacked-to-main
 
 ## PR 3 · Slice 3: listing + consent retrofit (F2/F1 touchpoints)
 
-- [ ] **T3.1** — `GET /api/v1/catalog/published-versions` via `CatalogService`/repository/schemas + `routes/catalog.py`: labels only, all roles, no draft/archived. RED `test_catalog_listing.py`. [F3]
-- [ ] **T3.2** — Retrofit `core/consent.py` + `routes/consent.py`: idempotent grant/revoke — replay, no dup registry/audit, diff body → `idempotency_key_reused`. RED `test_consent_idempotency.py`. [F3]
+- [x] **T3.1** — `GET /api/v1/catalog/published-versions` via `CatalogService`/repository/schemas + `routes/catalog.py`: labels only, all roles, no draft/archived. RED `test_catalog_listing.py`. [F3]
+- [x] **T3.2** — Retrofit `core/consent.py` + `routes/consent.py`: idempotent grant/revoke — replay, no dup registry/audit, diff body → `idempotency_key_reused`. RED `test_consent_idempotency.py`. [F3]
 
 ## PR 4 · Slice 4: web UI
 

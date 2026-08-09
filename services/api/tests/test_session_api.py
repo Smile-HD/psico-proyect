@@ -134,7 +134,8 @@ def _headers(token: str, key: str | None = None) -> dict[str, str]:
 
 def _grant(client: TestClient, token: str) -> None:
     response = client.post(
-        f"/api/v1/consent/{seed_id('consent:v1')}/grant", headers=_headers(token)
+        f"/api/v1/consent/{seed_id('consent:v1')}/grant",
+        headers=_headers(token, f"session-consent-grant-{uuid4().hex}"),
     )
     assert response.status_code == 200, response.text
 
@@ -253,7 +254,8 @@ def test_invalid_ids_are_indistinguishable_and_gate_precedes_consent(
 
     _grant(client, evaluator)
     revoked = client.post(
-        f"/api/v1/consent/{seed_id('consent:v1')}/revoke", headers=_headers(evaluator)
+        f"/api/v1/consent/{seed_id('consent:v1')}/revoke",
+        headers=_headers(evaluator, f"session-consent-revoke-{uuid4().hex}"),
     )
     assert revoked.status_code == 200
     draft_response = _start(client, evaluator, draft, f"draft-gate-{uuid4().hex}")

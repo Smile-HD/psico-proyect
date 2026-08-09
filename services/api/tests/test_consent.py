@@ -79,7 +79,8 @@ def test_grant_then_session_starts(client, seeded_db_session, db_session) -> Non
     consent_id = str(seed_id("consent:v1"))
 
     grant_resp = client.post(
-        f"/api/v1/consent/{consent_id}/grant", headers=_auth(token)
+        f"/api/v1/consent/{consent_id}/grant",
+        headers=_auth(token, "legacy-grant-session"),
     )
     assert grant_resp.status_code == 200
     assert grant_resp.json()["state"] == "granted"
@@ -108,9 +109,13 @@ def test_revoke_lifecycle(client, seeded_db_session, db_session) -> None:
     token = _login(client, "evaluado")
     consent_id = str(seed_id("consent:v1"))
 
-    client.post(f"/api/v1/consent/{consent_id}/grant", headers=_auth(token))
+    client.post(
+        f"/api/v1/consent/{consent_id}/grant",
+        headers=_auth(token, "legacy-grant-revoke"),
+    )
     revoke_resp = client.post(
-        f"/api/v1/consent/{consent_id}/revoke", headers=_auth(token)
+        f"/api/v1/consent/{consent_id}/revoke",
+        headers=_auth(token, "legacy-revoke"),
     )
     assert revoke_resp.status_code == 200
     assert revoke_resp.json()["state"] == "revoked"
@@ -130,8 +135,14 @@ def test_session_blocked_again_after_revoke(client, seeded_db_session, db_sessio
     consent_id = str(seed_id("consent:v1"))
     version_id = str(seed_id("TP-S-01:v1"))
 
-    client.post(f"/api/v1/consent/{consent_id}/grant", headers=_auth(token))
-    client.post(f"/api/v1/consent/{consent_id}/revoke", headers=_auth(token))
+    client.post(
+        f"/api/v1/consent/{consent_id}/grant",
+        headers=_auth(token, "legacy-grant-blocked"),
+    )
+    client.post(
+        f"/api/v1/consent/{consent_id}/revoke",
+        headers=_auth(token, "legacy-revoke-blocked"),
+    )
 
     resp = client.post(
         "/api/v1/sessions",

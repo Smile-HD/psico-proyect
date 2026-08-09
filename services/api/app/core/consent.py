@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -16,6 +17,11 @@ from sqlalchemy.orm import Session
 from app.core import audit
 from app.core.errors import ApiError, CONFLICT, NOT_FOUND
 from app.models.consent import ConsentGrant, ConsentVersion
+from app.modules.assessment_authoring.idempotency import (
+    IdempotencyReplay,
+    lookup_idempotency,
+    store_idempotency,
+)
 
 
 def get_active_consent_version(db: Session) -> ConsentVersion | None:
@@ -59,7 +65,23 @@ def grant_consent(
     user_id: uuid.UUID,
     consent_version_id: uuid.UUID,
     ip: str | None = None,
-) -> ConsentGrant:
+    *,
+    idempotency_key: str | None = None,
+    request_body: Any | None = None,
+) -> ConsentGrant | IdempotencyReplay:
+    body = request_body if request_body is not None else {}
+    if idempotency_key is not None:
+        replay = lookup_idempotency(
+            db,
+            actor_user_id=user_id,
+            operation="consent.grant",
+            resource_scope=f"consent:{consent_version_id}",
+            idempotency_key=idempotency_key,
+            request_body=body,
+        )
+        if replay is not None:
+            return replay
+
     version = db.get(ConsentVersion, consent_version_id)
     if version is None:
         raise ApiError(NOT_FOUND, "consent_version_not_found")
@@ -93,8 +115,23 @@ def grant_consent(
         action="grant",
         outcome="allowed",
         metadata={"consent_version_no": version.version_no},
-        commit=True,
+        commit=idempotency_key is None,
     )
+    if idempotency_key is not None:
+        store_idempotency(
+            db,
+            actor_user_id=user_id,
+            operation="consent.grant",
+            resource_scope=f"consent:{consent_version_id}",
+            idempotency_key=idempotency_key,
+            request_body=body,
+            response_status=200,
+            response_body={
+                "state": grant.state,
+                "consent_version_id": str(consent_version_id),
+            },
+        )
+        db.commit()
     return grant
 
 
@@ -102,7 +139,23 @@ def revoke_consent(
     db: Session,
     user_id: uuid.UUID,
     consent_version_id: uuid.UUID,
-) -> ConsentGrant:
+    *,
+    idempotency_key: str | None = None,
+    request_body: Any | None = None,
+) -> ConsentGrant | IdempotencyReplay:
+    body = request_body if request_body is not None else {}
+    if idempotency_key is not None:
+        replay = lookup_idempotency(
+            db,
+            actor_user_id=user_id,
+            operation="consent.revoke",
+            resource_scope=f"consent:{consent_version_id}",
+            idempotency_key=idempotency_key,
+            request_body=body,
+        )
+        if replay is not None:
+            return replay
+
     grant = db.scalar(
         select(ConsentGrant).where(
             ConsentGrant.user_id == user_id,
@@ -122,6 +175,21 @@ def revoke_consent(
         action="revoke",
         outcome="allowed",
         metadata={},
-        commit=True,
+        commit=idempotency_key is None,
     )
+    if idempotency_key is not None:
+        store_idempotency(
+            db,
+            actor_user_id=user_id,
+            operation="consent.revoke",
+            resource_scope=f"consent:{consent_version_id}",
+            idempotency_key=idempotency_key,
+            request_body=body,
+            response_status=200,
+            response_body={
+                "state": grant.state,
+                "consent_version_id": str(consent_version_id),
+            },
+        )
+        db.commit()
     return grant

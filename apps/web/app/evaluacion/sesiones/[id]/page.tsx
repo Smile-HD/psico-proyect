@@ -301,7 +301,7 @@ export default function SessionPage() {
 			{completionError ? <Notice tone="error" role="alert" message={completionError} /> : null}
 
 			{session.status === "completed" ? (
-				<section className={styles.complete} aria-labelledby="completed-heading">
+				<section className={styles.complete} aria-labelledby="completed-heading" role="status">
 					<h2 id="completed-heading">Evaluación completada</h2>
 					<p>Sus respuestas fueron registradas. Esta etapa no muestra puntuaciones ni resultados.</p>
 				</section>

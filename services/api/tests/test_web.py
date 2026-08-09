@@ -16,8 +16,9 @@ ROOT = pathlib.Path(__file__).resolve().parents[3]
 WEB = ROOT / "apps" / "web"
 COMPOSE = ROOT / "docker-compose.yml"
 
-PAGE = (WEB / "app" / "page.tsx").read_text(encoding="utf-8")
-LAYOUT = (WEB / "app" / "layout.tsx").read_text(encoding="utf-8")
+APP_DIR = WEB / "src" / "app" if (WEB / "src" / "app").exists() else WEB / "app"
+PAGE = (APP_DIR / "page.tsx").read_text(encoding="utf-8")
+LAYOUT = (APP_DIR / "layout.tsx").read_text(encoding="utf-8")
 PACKAGE = (WEB / "package.json").read_text(encoding="utf-8")
 
 
@@ -27,12 +28,11 @@ def test_web_scaffold_files_exist():
         "next.config.mjs",
         "tsconfig.json",
         "Dockerfile",
-        "app/layout.tsx",
-        "app/page.tsx",
-        "app/globals.css",
     ]
     for name in expected:
         assert (WEB / name).is_file(), f"missing web scaffold file: {name}"
+    for name in ["layout.tsx", "page.tsx", "globals.css"]:
+        assert (APP_DIR / name).is_file(), f"missing web scaffold file: {name}"
 
 
 def test_page_uses_compose_service_name():
@@ -40,14 +40,13 @@ def test_page_uses_compose_service_name():
     assert re.search(r"http://api:\d+", PAGE), "expected API_BASE_URL default http://api:8000"
     assert "localhost:8000" not in PAGE, "host-port URL would bypass the compose network"
 
-
 def test_page_is_spanish():
     for text in (
         "Estado del servicio",
         "Salud de la API",
-        "No se pudo conectar",
-        "Intente nuevamente más tarde",
-        "Semilla (datos sintéticos)",
+        "La API respondió con un estado no disponible",
+        "Semilla de referencia",
+        "Datos sintéticos",
     ):
         assert text in PAGE, f"expected Spanish UI text: {text}"
 
@@ -57,12 +56,12 @@ def test_page_never_leaks_stack_trace():
     assert "error.stack" not in PAGE
     # The error branch renders a fixed friendly message, never the exception
     # object or its message. React's error boundary keeps stack traces internal.
-    assert 'error ? (' in PAGE
-    assert "No se pudo conectar" in PAGE
+    assert "healthOk ?" in PAGE
+    assert "La API respondió con un estado no disponible" in PAGE
     assert "err.message" not in PAGE
     assert "error.message" not in PAGE
 
-
+    
 def test_page_has_spanish_layout_lang():
     assert 'lang="es"' in LAYOUT
 

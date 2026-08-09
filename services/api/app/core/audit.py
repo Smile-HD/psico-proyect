@@ -28,6 +28,8 @@ EVENT_CATALOG = {
     "consent.granted",
     "consent.revoked",
     "session.started",
+    "session.resumed",
+    "session.response_saved",
     "session.completed",
     "session.blocked_without_consent",
     "seed.executed",

@@ -246,3 +246,27 @@ def test_admin_version_detail_flat_contract(seeded_db_session) -> None:
         assert body["version_no"] == 1
         assert body["source"] == "runtime"
         assert isinstance(body["scales"], list)
+
+
+def test_evaluado_can_fetch_published_version_by_key_or_uuid(seeded_db_session) -> None:
+    """Evaluado can read published version using seed key e.g. TP-S-01:v1 or UUID."""
+    with TestClient(app) as client:
+        evaluator = _login(client, "evaluado", settings.dev_password_evaluado)
+        
+        # Fetch by seed key string "TP-S-01:v1"
+        resp_key = client.get(
+            "/api/v1/catalog/published-versions/TP-S-01:v1",
+            headers=_headers(evaluator),
+        )
+        assert resp_key.status_code == 200
+        data_key = resp_key.json()
+        assert data_key["instrument_key"] == "TP-S-01"
+
+        # Fetch by UUID string
+        version_id = data_key["instrument_version_id"]
+        resp_uuid = client.get(
+            f"/api/v1/catalog/published-versions/{version_id}",
+            headers=_headers(evaluator),
+        )
+        assert resp_uuid.status_code == 200
+        assert resp_uuid.json()["instrument_version_id"] == version_id

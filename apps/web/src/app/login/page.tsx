@@ -25,10 +25,13 @@ export default function LoginPage() {
 		setBusy(true);
 		setError(null);
 		try {
-			await login(username, password);
+			const loggedIn = await login(username, password);
 			setUsername("");
 			setPassword("");
-			router.push("/catalogo");
+			const destination = loggedIn.roles.includes("evaluado")
+				? "/sesion"
+				: "/catalogo";
+			router.push(destination);
 		} catch (err) {
 			const isCredentialError =
 				err instanceof ApiError &&

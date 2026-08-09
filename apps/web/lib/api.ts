@@ -78,7 +78,22 @@ export async function apiFetch<T>(
 		}
 	}
 	if (!res.ok) {
-		throw envelope<ApiErrorPayload>(parsed);
+		// If the server returned a parseable error envelope, throw that.
+		// Otherwise synthesize an ApiError from the HTTP status so callers
+		// always receive a consistent ApiError (never a silent null resolve).
+		if (
+			parsed &&
+			typeof parsed === "object" &&
+			"error" in (parsed as object)
+		) {
+			throw new ApiError((parsed as { error: ApiErrorPayload }).error);
+		}
+		throw new ApiError({
+			code: `HTTP_${res.status}`,
+			message: `El servidor respondió con un error (${res.status} ${res.statusText}).`,
+			request_id: "",
+			details: { status: res.status, body: parsed },
+		});
 	}
 	return envelope<T>(parsed);
 }

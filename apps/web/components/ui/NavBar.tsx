@@ -12,17 +12,30 @@ export type NavBarProps = {
 	onLogout?: () => void;
 };
 
+/** Short display label for each role — keeps the UI in Spanish per spec. */
+function roleLabel(roles: string[]): string {
+	if (roles.includes("admin")) return "admin";
+	if (roles.includes("psicólogo")) return "psicólogo";
+	if (roles.includes("evaluado")) return "evaluado";
+	return roles[0] ?? "";
+}
+
 export default function NavBar({ className, onLogout }: NavBarProps) {
 	const router = useRouter();
 	const pathname = usePathname() ?? "";
 	const { user, ready } = useSessionUser();
 	const [menuOpen, setMenuOpen] = useState(false);
+
 	const canManage =
 		ready &&
-		(user?.roles.includes("admin") || user?.roles.includes("psicologo"));
+		(user?.roles.includes("admin") || user?.roles.includes("psicólogo"));
+	const isEvaluado = ready && user?.roles.includes("evaluado");
+
 	const isHomeActive = pathname === "/";
 	const isCatalogActive =
 		pathname === "/catalogo" || pathname.startsWith("/catalogo/");
+	const isSessionActive =
+		pathname === "/sesion" || pathname.startsWith("/sesion");
 
 	useEffect(() => {
 		setMenuOpen(false);
@@ -33,7 +46,6 @@ export default function NavBar({ className, onLogout }: NavBarProps) {
 			onLogout();
 			return;
 		}
-
 		clearSession();
 		router.replace("/login");
 	}
@@ -99,6 +111,17 @@ export default function NavBar({ className, onLogout }: NavBarProps) {
 								</Link>
 							</li>
 						) : null}
+						{isEvaluado ? (
+							<li>
+								<Link
+									className={styles.navLink}
+									href="/sesion"
+									aria-current={isSessionActive ? "page" : undefined}
+								>
+									Rendir test
+								</Link>
+							</li>
+						) : null}
 					</ul>
 				</nav>
 
@@ -106,7 +129,14 @@ export default function NavBar({ className, onLogout }: NavBarProps) {
 					<div className={styles.userArea}>
 						{user ? (
 							<>
-								<span className={styles.username}>{user.username}</span>
+								<span className={styles.username}>
+									{user.username}
+									{user.roles.length > 0 ? (
+										<span className={styles.roleChip}>
+											{roleLabel(user.roles)}
+										</span>
+									) : null}
+								</span>
 								<button
 									className={styles.authButton}
 									type="button"

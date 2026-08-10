@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import Button from "@/components/ui/Button";
 import { ErrorState, Notice } from "@/components/ui/Feedback";
+import LikertMatrix, { type LikertItem } from "@/components/ui/LikertMatrix";
 import Skeleton from "@/components/ui/Skeleton";
 import { getToken, useSessionUser } from "@/lib/auth";
 import {
@@ -38,6 +39,26 @@ function sessionItems(detail: SessionDetail): SessionItem[] {
 		);
 }
 
+function matrixItems(items: SessionItem[]): LikertItem[] {
+	return items
+		.slice()
+		.sort((a, b) => a.item_order - b.item_order)
+		.map((item) => ({
+			id: item.id,
+			order: item.item_order,
+			text: item.text,
+			required: item.required,
+			options: item.response_options
+				.slice()
+				.sort((a, b) => a.display_order - b.display_order)
+				.map((option) => ({
+					id: option.id,
+					order: option.display_order,
+					label: option.label,
+				})),
+		}));
+}
+
 function initialAnswers(detail: SessionDetail): Answers {
 	return Object.fromEntries(
 		sessionItems(detail)
@@ -46,8 +67,27 @@ function initialAnswers(detail: SessionDetail): Answers {
 	);
 }
 
+function responsePayload(answers: Answers): SessionResponseInput[] {
+	return Object.entries(answers).map(([item_id, response_option_id]) => ({
+		item_id,
+		response_option_id,
+	}));
+}
+
 function requiredMissing(items: SessionItem[], answers: Answers): SessionItem[] {
 	return items.filter((item) => item.required && !answers[item.id]);
+}
+
+function focusItem(item: SessionItem | undefined): void {
+	if (!item) return;
+	requestAnimationFrame(() => {
+		const input = Array.from(
+			document.querySelectorAll<HTMLInputElement>('input[type="radio"]'),
+		).find((candidate) =>
+			candidate.getAttribute("aria-label")?.startsWith(`${item.text}:`),
+		);
+		input?.focus();
+	});
 }
 
 export default function SessionPage() {
@@ -56,7 +96,6 @@ export default function SessionPage() {
 	const { user, ready } = useSessionUser();
 	const [session, setSession] = useState<SessionDetail | null>(null);
 	const [answers, setAnswers] = useState<Answers>({});
-	const [currentIndex, setCurrentIndex] = useState(0);
 	const [loadError, setLoadError] = useState(false);
 	const [reloadKey, setReloadKey] = useState(0);
 	const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -69,7 +108,8 @@ export default function SessionPage() {
 	const queueRef = useRef<SaveIntent[]>([]);
 	const drainRef = useRef<Promise<void> | null>(null);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const itemHeadingRef = useRef<HTMLHeadingElement>(null);
+	const headingRef = useRef<HTMLHeadingElement>(null);
+	const focusedRef = useRef(false);
 	const completionKeyRef = useRef<string | null>(null);
 
 	useEffect(() => {
@@ -88,9 +128,6 @@ export default function SessionPage() {
 				const restored = initialAnswers(data);
 				answersRef.current = restored;
 				setAnswers(restored);
-				const items = sessionItems(data);
-				const firstUnanswered = items.findIndex((item) => !restored[item.id]);
-				setCurrentIndex(firstUnanswered >= 0 ? firstUnanswered : 0);
 				if (data.status === "completed") {
 					if (getActiveSessionId() === params.id) clearActiveSessionId();
 				} else {
@@ -116,9 +153,11 @@ export default function SessionPage() {
 	}, [params.id, ready, reloadKey, router, user]);
 
 	useEffect(() => {
-		if (!session || session.status === "completed") return;
-		requestAnimationFrame(() => itemHeadingRef.current?.focus());
-	}, [currentIndex, session]);
+		if (session && !focusedRef.current) {
+			focusedRef.current = true;
+			requestAnimationFrame(() => headingRef.current?.focus());
+		}
+	}, [session]);
 
 	async function saveIntent(intent: SaveIntent): Promise<boolean> {
 		setSaveStatus("saving");
@@ -172,25 +211,17 @@ export default function SessionPage() {
 		setAnswers(next);
 		setCompletionError("");
 		setSaveStatus("idle");
-		const failed = failedRef.current;
-		if (failed && failed.responses[0]?.item_id !== itemId) {
-			failedRef.current = null;
-			queueRef.current.unshift(failed);
-			void ensureDrain();
-		}
+		// A fresh debounce cycle supersedes a failed intent: the full snapshot
+		// below already contains every answer of the failed one, so nothing is
+		// lost and a new Idempotency-Key starts the new cycle (ADR-004).
+		failedRef.current = null;
 
 		let intent = pendingRef.current;
-		if (intent && intent.responses[0]?.item_id !== itemId) {
-			pendingRef.current = null;
-			if (timerRef.current) clearTimeout(timerRef.current);
-			queueIntent(intent);
-			intent = null;
-		}
 		if (!intent) {
 			intent = { key: newIntentKey(), responses: [] };
 			pendingRef.current = intent;
 		}
-		intent.responses = [{ item_id: itemId, response_option_id: optionId }];
+		intent.responses = responsePayload(next);
 		if (timerRef.current) clearTimeout(timerRef.current);
 		timerRef.current = setTimeout(() => {
 			const readyIntent = pendingRef.current;
@@ -207,19 +238,13 @@ export default function SessionPage() {
 		void ensureDrain();
 	}
 
-	function moveToItem(index: number): void {
-		setCurrentIndex(index);
-		setCompletionError("");
-	}
-
 	async function complete(): Promise<void> {
 		if (!session || completing) return;
 		const items = sessionItems(session);
 		const missing = requiredMissing(items, answersRef.current);
 		if (missing.length) {
 			setCompletionError("Responda los ítems marcados como obligatorios antes de completar.");
-			const missingIndex = items.findIndex((item) => item.id === missing[0].id);
-			if (missingIndex >= 0) setCurrentIndex(missingIndex);
+			focusItem(missing[0]);
 			return;
 		}
 
@@ -247,9 +272,7 @@ export default function SessionPage() {
 					: mapped.message,
 			);
 			if (mapped.kind === "validation") {
-				const serverMissing = requiredMissing(items, answersRef.current);
-				const missingIndex = items.findIndex((item) => item.id === serverMissing[0]?.id);
-				if (missingIndex >= 0) setCurrentIndex(missingIndex);
+				focusItem(requiredMissing(items, answersRef.current)[0]);
 			}
 		} finally {
 			setCompleting(false);
@@ -272,15 +295,14 @@ export default function SessionPage() {
 		);
 	}
 
+	const projection = session.projection;
 	const items = sessionItems(session);
-	const currentItem = items[currentIndex];
 	const answeredCount = Object.keys(answers).length;
-	const isLastItem = currentIndex === items.length - 1;
 	const saveMessage =
 		saveStatus === "saving"
-			? "Guardando respuesta…"
+			? "Guardando respuestas…"
 			: saveStatus === "saved"
-				? "Respuesta guardada."
+				? "Respuestas guardadas."
 				: saveError;
 
 	return (
@@ -288,7 +310,7 @@ export default function SessionPage() {
 			<Breadcrumb items={[{ label: "Evaluaciones", href: "/evaluacion" }, { label: "Sesión", current: true }]} />
 			<header className={styles.header}>
 				<p className={styles.eyebrow}>Evaluación</p>
-				<h1>Completar evaluación</h1>
+				<h1 ref={headingRef} tabIndex={-1}>Completar evaluación</h1>
 				<p className={styles.intro}>Seleccione una etiqueta por cada ítem. Sus respuestas se guardan automáticamente.</p>
 			</header>
 
@@ -305,76 +327,47 @@ export default function SessionPage() {
 					<h2 id="completed-heading">Evaluación completada</h2>
 					<p>Sus respuestas fueron registradas. Esta etapa no muestra puntuaciones ni resultados.</p>
 				</section>
-			) : currentItem ? (
+			) : items.length === 0 ? (
+				<Notice tone="warning" role="alert" message="Esta evaluación no contiene ítems disponibles." />
+			) : (
 				<>
 					<section className={styles.progress} aria-label="Progreso de la evaluación">
 						<p className={styles.progressLabel} aria-live="polite">
-							Ítem {currentIndex + 1} de {items.length}
-							<span> · {answeredCount} respondido{answeredCount === 1 ? "" : "s"}</span>
+							{answeredCount} de {items.length} respondido{answeredCount === 1 ? "" : "s"}
 						</p>
 						<div
 							className={styles.progressBar}
 							role="progressbar"
 							aria-label="Avance de la evaluación"
-							aria-valuenow={currentIndex + 1}
-							aria-valuemin={1}
+							aria-valuenow={answeredCount}
+							aria-valuemin={0}
 							aria-valuemax={items.length}
 						>
-							<span style={{ width: `${((currentIndex + 1) / items.length) * 100}%` }} />
+							<span style={{ width: `${(answeredCount / items.length) * 100}%` }} />
 						</div>
 					</section>
 
-					<section className={styles.itemCard} aria-labelledby={`item-${currentItem.id}`}>
-						<h2 id={`item-${currentItem.id}`} ref={itemHeadingRef} tabIndex={-1} className={styles.itemHeading}>
-							{currentItem.text}
-							{currentItem.required ? <span className={styles.required}> (obligatorio)</span> : null}
-						</h2>
-						<fieldset className={styles.options} aria-required={currentItem.required || undefined}>
-							<legend className={styles.visuallyHidden}>Seleccione una opción para este ítem</legend>
-							{currentItem.response_options
-								.slice()
-								.sort((a, b) => a.display_order - b.display_order)
-								.map((option) => {
-									const selected = answers[currentItem.id] === option.id;
-									return (
-										<label className={styles.option} data-selected={selected} key={option.id}>
-											<input
-												className={styles.radio}
-												type="radio"
-												name={`item-${currentItem.id}`}
-												value={option.id}
-												checked={selected}
-												aria-label={`${currentItem.text}: ${option.label}`}
-												onChange={(event) => {
-													if (event.target.checked) changeAnswer(currentItem.id, option.id);
-												}}
-											/>
-											<span className={styles.optionMarker} aria-hidden="true" />
-											<span>{option.label}</span>
-										</label>
-									);
-								})}
-						</fieldset>
-						<p className={styles.requiredHint}>Los ítems marcados como <strong>obligatorios</strong> deben tener una respuesta.</p>
-					</section>
+					{projection.scales
+						.slice()
+						.sort((a, b) => a.display_order - b.display_order)
+						.map((scale) => (
+							<section className={styles.scale} key={scale.id} aria-labelledby={`scale-${scale.id}`}>
+								<h2 id={`scale-${scale.id}`}>{scale.label}</h2>
+								<LikertMatrix
+									caption={`${scale.label} — opciones de respuesta`}
+									items={matrixItems(scale.items)}
+									interactive
+									valueByItem={answers}
+									onChange={changeAnswer}
+								/>
+							</section>
+						))}
 
-					<nav className={styles.actions} aria-label="Navegación entre ítems">
-						<Button type="button" variant="secondary" onClick={() => moveToItem(currentIndex - 1)} disabled={currentIndex === 0}>
-							Anterior
-						</Button>
-						{isLastItem ? (
-							<Button type="button" busy={completing} pendingLabel="Completando…" onClick={complete}>
-								Completar evaluación
-							</Button>
-						) : (
-							<Button type="button" onClick={() => moveToItem(currentIndex + 1)}>
-								Siguiente
-							</Button>
-						)}
-					</nav>
+					<footer className={styles.actions}>
+						<p>Los ítems marcados como <strong>obligatorios</strong> deben tener una respuesta.</p>
+						<Button type="button" busy={completing} pendingLabel="Completando…" onClick={complete}>Completar evaluación</Button>
+					</footer>
 				</>
-			) : (
-				<Notice tone="warning" role="alert" message="Esta evaluación no contiene ítems disponibles." />
 			)}
 		</div>
 	);

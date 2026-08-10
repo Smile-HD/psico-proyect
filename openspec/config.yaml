@@ -59,10 +59,10 @@ rules:
       - Never modify a published instrument; introduce a new instrument_version_id instead
       - Keep all data synthetic and research-only
     tdd: false
-    test_command: ""
+    test_command: "powershell -ExecutionPolicy Bypass -File scripts/test.ps1"
   verify:
-    test_command: ""
-    build_command: ""
+    test_command: "powershell -ExecutionPolicy Bypass -File scripts/test.ps1"
+    build_command: "npm run build (working directory: apps/web)"
     coverage_threshold: 0
   archive:
     - Warn before merging destructive deltas

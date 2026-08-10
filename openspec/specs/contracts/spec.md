@@ -46,7 +46,7 @@ Every API error MUST return exactly `{"error": {"code", "message", "request_id",
 
 ### Requirement: Idempotent Mutations
 
-Every mutating endpoint (`POST`, `PUT`, `PATCH`) MUST accept an `Idempotency-Key` header. Repeating a request with the same key for the same resource MUST replay the original result without duplicating the side effect; a new key MUST start an independent operation. Side effects include both data rows and audit events: a replayed request MUST NOT duplicate either. F2 is the first implementation of this requirement: every F2 catalog mutation (create instrument, create draft version, save draft hierarchy, publish, archive) MUST implement it. When the same key is reused with a materially different request body, the system MUST NOT create a second side effect and MUST reject with `CONFLICT`.
+Every mutating endpoint (`POST`, `PUT`, `PATCH`) MUST accept an `Idempotency-Key` header. Repeating a request with the same key for the same resource MUST replay the original result without duplicating the side effect; a new key MUST start an independent operation. Side effects include both data rows and audit events: a replayed request MUST NOT duplicate either. F2 was the first implementation, scoped to catalog mutations. F3 extends the implementation obligation to session mutations (create session, save responses, complete) and to consent grant/revoke mutations, preserving their existing semantics. When the same key is reused with a materially different request body, the system MUST NOT create a second side effect and MUST reject with `CONFLICT`; F3 session and consent mutations MUST use the message token `idempotency_key_reused`.
 
 #### Scenario: Retry without duplication
 
@@ -74,6 +74,12 @@ Every mutating endpoint (`POST`, `PUT`, `PATCH`) MUST accept an `Idempotency-Key
 - THEN the system returns `CONFLICT`
 - AND no second side effect is created
 
+#### Scenario: F3 session mutation rejects key reuse
+
+- GIVEN a session creation that succeeded with `Idempotency-Key: k`
+- WHEN the same key arrives with a different `instrument_version_id`
+- THEN `CONFLICT` with `idempotency_key_reused` is returned
+- AND no second session row or audit event is created
 
 ### Requirement: Contract Language
 

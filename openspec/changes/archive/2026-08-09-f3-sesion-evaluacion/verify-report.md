@@ -199,7 +199,14 @@ Coverage analysis skipped — no coverage tool is configured or available. The w
 | ADR-003 gate order | ✅ Yes | Published gate runs before `require_consent`; invalid probes create no session/audit side effect. |
 | ADR-004 autosave keys | ✅ Yes | Per-intent keys, ordered single-flight draining, and failed-intent retry are implemented. |
 | ADR-005 no migration/seed/scoring/new event | ✅ Yes | No migration, seed, scoring surface, or new audit event was found. |
-| Frozen LikertMatrix / published-read wording | ⚠️ Documented deviation | PR5 uses a one-item native-radio wizard over the safe session-detail projection instead of importing the frozen `LikertMatrix` component and its published-read wording. The behavior remains option-ID-only and accessible by inspection; reconciliation remains non-blocking. |
+| Frozen LikertMatrix / published-read wording | ✅ Resolved post-archive | Judgment Day round 1 (2026-08-09) flagged the PR5 wizard deviation; maintainer approved the fix: commit `d7dfb01` now renders the session through the frozen `LikertMatrix` in interactive mode (one matrix per scale). Round 2 (`fadbb24`) closed two autosave edge cases (unmount flush, per-intent pinned session id). Final re-judgment: both judges approve. |
+
+### Post-archive Judgment Day Resolution (2026-08-09)
+
+A blind dual review (Judgment Day) of the archived change raised suspects S3 (LikertMatrix deviation) and B1/B2 (autosave edge cases). Maintainer approved two fix rounds:
+- `d7dfb01 fix(web): render session through frozen LikertMatrix` — spec `web-pages` L29 now satisfied literally: interactive LikertMatrix, controlled radios, aria-label per cell, debounced autosave with per-intent Idempotency-Key, resume, `role="status"`, required marking, no scores.
+- `fadbb24 fix(web): flush pending autosave and pin session id per intent` — unmount flush of pending answers; session id captured at enqueue time so queued saves never target a different session.
+- Final scoped re-judgment (round 2): Judge A 0 findings; Judge B 1 non-severe WARNING (stale save feedback on an unreachable in-place route change; cosmetic, no user path). No severe findings confirmed by both judges at any round. Terminal verdict: APPROVED.
 
 ### Owner Manual Checklist Risk
 

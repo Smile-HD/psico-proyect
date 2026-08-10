@@ -28,7 +28,7 @@ import styles from "./page.module.css";
 
 const SAVE_DELAY = 700;
 type Answers = Record<string, string>;
-type SaveIntent = { key: string; responses: SessionResponseInput[] };
+type SaveIntent = { key: string; sessionId: string; responses: SessionResponseInput[] };
 
 function sessionItems(detail: SessionDetail): SessionItem[] {
 	return (detail.projection?.scales ?? [])
@@ -149,6 +149,11 @@ export default function SessionPage() {
 		return () => {
 			cancelled = true;
 			if (timerRef.current) clearTimeout(timerRef.current);
+			timerRef.current = null;
+			// Flush a still-pending answer before unmount: bypassing the
+			// remaining debounce is safe because the intent already carries
+			// the session id captured when it was created.
+			void flushPending();
 		};
 	}, [params.id, ready, reloadKey, router, user]);
 
@@ -162,7 +167,7 @@ export default function SessionPage() {
 	async function saveIntent(intent: SaveIntent): Promise<boolean> {
 		setSaveStatus("saving");
 		try {
-			await saveSessionResponses(getToken() ?? "", params.id, intent.responses, intent.key);
+			await saveSessionResponses(getToken() ?? "", intent.sessionId, intent.responses, intent.key);
 			failedRef.current = null;
 			setSaveError("");
 			setSaveStatus("saved");
@@ -218,7 +223,7 @@ export default function SessionPage() {
 
 		let intent = pendingRef.current;
 		if (!intent) {
-			intent = { key: newIntentKey(), responses: [] };
+			intent = { key: newIntentKey(), sessionId: params.id, responses: [] };
 			pendingRef.current = intent;
 		}
 		intent.responses = responsePayload(next);

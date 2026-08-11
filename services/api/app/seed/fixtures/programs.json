@@ -1,0 +1,11 @@
+{
+  "institution_key": "institution:dev",
+  "faculty_key": "faculty:dev",
+  "programs": [
+    {"key": "program:software-design", "name": "Diseño de Software Sintético", "code": "PS-SD-101"},
+    {"key": "program:data-analytics", "name": "Analítica de Datos Sintética", "code": "PS-DA-102"},
+    {"key": "program:educational-guidance", "name": "Orientación Educativa Sintética", "code": "PS-OE-103"},
+    {"key": "program:strategic-communication", "name": "Comunicación Estratégica Sintética", "code": "PS-CE-104"},
+    {"key": "program:sustainable-environments", "name": "Entornos Sostenibles Sintéticos", "code": "PS-ES-105"}
+  ]
+}

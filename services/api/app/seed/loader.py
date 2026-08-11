@@ -39,13 +39,14 @@ from app.models.instruments import (
     ResponseOption,
     Scale,
 )
+from app.models.recommendation import RecommendationRule
 from app.models.scoring import ReferenceSet, ReferenceValue
 from app.models.seed import SeedManifest
 from app.models.sessions import Response, Session
 
 logger = logging.getLogger("psico.seed")
 
-SEED_VERSION = "1.0.0"
+SEED_VERSION = "1.1.0"
 SEED_OPTION_LABELS = (
     "Nunca",
     "Casi nunca",
@@ -76,6 +77,8 @@ SEED_TABLES = [
     "responses",
     "reference_sets",
     "reference_values",
+    "recommendation_rules",
+    "recommendation_results",
 ]
 
 # Reverse FK order for --reset (children before parents).
@@ -285,6 +288,41 @@ def _seed_rows(db: Session) -> None:
             "source": "seed",
         },
     )
+
+    # --- synthetic recommendation catalog (F5) -------------------------------
+    programs_fixture = _load_json("programs.json")
+    fixture_institution_id = seed_id(programs_fixture["institution_key"])
+    fixture_faculty_id = seed_id(programs_fixture["faculty_key"])
+    for program in programs_fixture["programs"]:
+        _upsert(
+            db,
+            Program,
+            {
+                "id": seed_id(program["key"]),
+                "institution_id": fixture_institution_id,
+                "faculty_id": fixture_faculty_id,
+                "name": program["name"],
+                "code": program["code"],
+                "synthetic": True,
+                "source": "seed",
+            },
+        )
+
+    rules_fixture = _load_json("recommendation_rules.json")
+    for rule in rules_fixture["rules"]:
+        _upsert(
+            db,
+            RecommendationRule,
+            {
+                "id": seed_id(rule["key"]),
+                "program_id": seed_id(rule["program_key"]),
+                "rule_type": rule["rule_type"],
+                "params": rule["params"],
+                "is_active": rule["is_active"],
+                "synthetic": True,
+                "source": "seed",
+            },
+        )
 
     # --- instrument TP-S-01 (20 items, version 1, published + immutable) ------
     items = _load_json("items.json")
@@ -557,6 +595,20 @@ def _seed_reset_preflight(db: Session) -> None:
             SELECT id FROM reference_values
             WHERE source <> 'seed'
               AND reference_set_id IN (SELECT id FROM reference_sets WHERE source = 'seed')
+        """,
+        "recommendation_rules": """
+            SELECT id FROM recommendation_rules
+            WHERE source <> 'seed'
+              AND program_id IN (SELECT id FROM programs WHERE source = 'seed')
+        """,
+        "recommendation_results": """
+            SELECT id FROM recommendation_results
+            WHERE source <> 'seed'
+              AND (
+                  rule_id IN (SELECT id FROM recommendation_rules WHERE source = 'seed')
+                  OR program_id IN (SELECT id FROM programs WHERE source = 'seed')
+                  OR session_id IN (SELECT id FROM sessions WHERE source = 'seed')
+              )
         """,
     }
     conflicts: list[str] = []

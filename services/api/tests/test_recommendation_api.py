@@ -410,9 +410,9 @@ def test_foreign_evaluado_cannot_generate_or_read_recommendations(
     client, seeded_db_session, db_session
 ) -> None:
     admin = _login(client, "admin")
-    owner = _login(client, "evaluado_27")
-    foreign = _login(client, "evaluado_28")
-    session_id = _seeded_session("evaluado_27")
+    owner = _login(client, "evaluado_21")
+    foreign = _login(client, "evaluado_22")
+    session_id = _seeded_session("evaluado_21")
     score = _score(client, admin, session_id, f"recommendation-score-{uuid4().hex}")
     assert score.status_code == 200, score.text
     generated = _generate(

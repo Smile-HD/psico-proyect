@@ -19,6 +19,10 @@ from app.seed.loader import seed_id
 from app.modules.recommendation.service import RecommendationService
 
 
+SERVICE_PROFILE_PRIMARY = "evaluado_29"
+SERVICE_PROFILE_SECONDARY = "evaluado_30"
+
+
 def _user(profile: str, role: str = "evaluado") -> SimpleNamespace:
     return SimpleNamespace(id=seed_id(profile), roles=[role])
 
@@ -104,8 +108,8 @@ def test_generation_persists_rows_and_one_aggregate_audit_event(
     seeded_db_session,
 ) -> None:
     db = seeded_db_session
-    session = _score_reserved_session(db, "evaluado_21")
-    user = _user("evaluado_21")
+    session = _score_reserved_session(db, SERVICE_PROFILE_PRIMARY)
+    user = _user(SERVICE_PROFILE_PRIMARY)
     service = RecommendationService()
     before_rows = _count_results(db, session.id)
     before_events = len(_recommendation_events(db, session.id))
@@ -182,8 +186,8 @@ def test_audit_failure_rolls_back_rows_and_fails_closed(
     monkeypatch,
 ) -> None:
     db = seeded_db_session
-    session = _score_reserved_session(db, "evaluado_22")
-    user = _user("evaluado_22")
+    session = _score_reserved_session(db, SERVICE_PROFILE_SECONDARY)
+    user = _user(SERVICE_PROFILE_SECONDARY)
     before_rows = _count_results(db, session.id)
     before_events = len(_recommendation_events(db, session.id))
 
@@ -206,29 +210,30 @@ def test_generation_idempotency_replays_conflicts_and_allows_new_key(
     seeded_db_session,
 ) -> None:
     db = seeded_db_session
-    session = _score_reserved_session(db, "evaluado_23")
-    user = _user("evaluado_23")
+    session = _score_reserved_session(db, SERVICE_PROFILE_PRIMARY)
+    user = _user(SERVICE_PROFILE_PRIMARY)
     service = RecommendationService()
     key = f"recommendation-replay-{uuid4().hex}"
     body = {"mode": "default"}
-
-    first = service.generate_recommendations(db, user, session.id, body, key)
     before_rows = _count_results(db, session.id)
     before_events = len(_recommendation_events(db, session.id))
+    first = service.generate_recommendations(db, user, session.id, body, key)
+    after_first_rows = _count_results(db, session.id)
+    after_first_events = len(_recommendation_events(db, session.id))
     replay = service.generate_recommendations(
         db, user, session.id, {"mode": "default"}, key
     )
     assert replay == first
-    assert _count_results(db, session.id) == before_rows
-    assert len(_recommendation_events(db, session.id)) == before_events
+    assert _count_results(db, session.id) == after_first_rows
+    assert len(_recommendation_events(db, session.id)) == after_first_events
 
     with pytest.raises(ApiError) as reused:
         service.generate_recommendations(
             db, user, session.id, {"mode": "different"}, key
         )
     assert _error_signature(reused.value)[:2] == (CONFLICT, "idempotency_key_reused")
-    assert _count_results(db, session.id) == before_rows
-    assert len(_recommendation_events(db, session.id)) == before_events
+    assert _count_results(db, session.id) == after_first_rows
+    assert len(_recommendation_events(db, session.id)) == after_first_events
 
     second = service.generate_recommendations(
         db,
@@ -238,8 +243,12 @@ def test_generation_idempotency_replays_conflicts_and_allows_new_key(
         f"recommendation-new-{uuid4().hex}",
     )
     assert second[0] == 200
-    assert _count_results(db, session.id) == before_rows * 2
-    assert len(_recommendation_events(db, session.id)) == before_events + 1
+    generation_rows = after_first_rows - before_rows
+    generation_events = after_first_events - before_events
+    assert generation_rows > 0
+    assert generation_events == 1
+    assert _count_results(db, session.id) == after_first_rows + generation_rows
+    assert len(_recommendation_events(db, session.id)) == after_first_events + generation_events
 
 
 def test_generation_access_and_availability_errors_are_stable(
@@ -248,8 +257,9 @@ def test_generation_access_and_availability_errors_are_stable(
     db = seeded_db_session
     service = RecommendationService()
 
-    foreign_session = _completed_session(db, "evaluado_24")
-    foreign_user = _user("evaluado_25")
+    foreign_session = _completed_session(db, SERVICE_PROFILE_PRIMARY)
+    foreign_user = _user(SERVICE_PROFILE_SECONDARY)
+    before_foreign_rows = _count_results(db, foreign_session.id)
     with pytest.raises(ApiError) as foreign:
         service.generate_recommendations(
             db,
@@ -259,11 +269,11 @@ def test_generation_access_and_availability_errors_are_stable(
             f"recommendation-foreign-{uuid4().hex}",
         )
     assert foreign.value.code == FORBIDDEN
-    assert _count_results(db, foreign_session.id) == 0
+    assert _count_results(db, foreign_session.id) == before_foreign_rows
     assert _denial_events(db, foreign_session.id)[-1].outcome == "denied"
 
-    unscored = _runtime_session(db, "evaluado_26", "completed")
-    owner = _user("evaluado_26")
+    unscored = _runtime_session(db, SERVICE_PROFILE_SECONDARY, "completed")
+    owner = _user(SERVICE_PROFILE_SECONDARY)
     with pytest.raises(ApiError) as unscored_error:
         service.generate_recommendations(
             db, owner, unscored.id, {}, f"recommendation-unscored-{uuid4().hex}"
@@ -279,11 +289,12 @@ def test_generation_access_and_availability_errors_are_stable(
         {},
     )
 
-    in_progress = _runtime_session(db, "evaluado_27", "in_progress")
+    in_progress = _runtime_session(db, SERVICE_PROFILE_PRIMARY, "in_progress")
+    before_in_progress_rows = _count_results(db, in_progress.id)
     with pytest.raises(ApiError) as incomplete:
         service.generate_recommendations(
             db,
-            _user("evaluado_27"),
+            _user(SERVICE_PROFILE_PRIMARY),
             in_progress.id,
             {},
             f"recommendation-in-progress-{uuid4().hex}",
@@ -293,15 +304,15 @@ def test_generation_access_and_availability_errors_are_stable(
         "session_not_completed",
         {},
     )
-    assert _count_results(db, in_progress.id) == 0
+    assert _count_results(db, in_progress.id) == before_in_progress_rows
 
 
 def test_latest_recommendations_uses_latest_generation_and_deterministic_item_order(
     seeded_db_session,
 ) -> None:
     db = seeded_db_session
-    session = _score_reserved_session(db, "evaluado_28")
-    user = _user("evaluado_28")
+    session = _score_reserved_session(db, SERVICE_PROFILE_SECONDARY)
+    user = _user(SERVICE_PROFILE_SECONDARY)
     service = RecommendationService()
 
     first = service.generate_recommendations(
@@ -329,8 +340,8 @@ def test_get_no_generation_and_foreign_read_are_safe(
 ) -> None:
     db = seeded_db_session
     service = RecommendationService()
-    no_generation = _runtime_session(db, "evaluado_29", "completed")
-    owner = _user("evaluado_29")
+    no_generation = _runtime_session(db, SERVICE_PROFILE_PRIMARY, "completed")
+    owner = _user(SERVICE_PROFILE_PRIMARY)
 
     with pytest.raises(ApiError) as no_generation_error:
         service.latest_recommendations(db, owner, no_generation.id)
@@ -343,15 +354,15 @@ def test_get_no_generation_and_foreign_read_are_safe(
         {},
     )
 
-    generated = _score_reserved_session(db, "evaluado_30")
+    generated = _score_reserved_session(db, SERVICE_PROFILE_SECONDARY)
     service.generate_recommendations(
         db,
-        _user("evaluado_30"),
+        _user(SERVICE_PROFILE_SECONDARY),
         generated.id,
         {},
         f"recommendation-owner-read-{uuid4().hex}",
     )
     with pytest.raises(ApiError) as foreign:
-        service.latest_recommendations(db, _user("evaluado_29"), generated.id)
+        service.latest_recommendations(db, _user(SERVICE_PROFILE_PRIMARY), generated.id)
     assert foreign.value.code == FORBIDDEN
     assert _denial_events(db, generated.id)[-1].outcome == "denied"

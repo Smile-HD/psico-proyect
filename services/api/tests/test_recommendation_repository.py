@@ -17,6 +17,10 @@ from app.modules.scoring.service import ScoringService
 from app.seed.loader import seed_id
 
 
+REPOSITORY_PROFILE_PRIMARY = "evaluado_27"
+REPOSITORY_PROFILE_SECONDARY = "evaluado_28"
+
+
 def _seeded_completed_session(db, profile: str) -> SessionRow:
     session = db.get(SessionRow, seed_id(f"session:{profile}"))
     assert session is not None
@@ -63,9 +67,9 @@ def _result_count(db, session_id: UUID) -> int:
 
 def test_repository_reads_latest_scored_run_programs_and_active_rules(seeded_db_session) -> None:
     db = seeded_db_session
-    session = _score_reserved_session(db, "evaluado_21")
+    session = _score_reserved_session(db, REPOSITORY_PROFILE_PRIMARY)
     repository = RecommendationRepository()
-    _score_reserved_session(db, "evaluado_21")
+    _score_reserved_session(db, REPOSITORY_PROFILE_PRIMARY)
 
     context = repository.get_recommendation_context(db, session.id)
     active_rules = repository.list_active_rules(db)
@@ -105,7 +109,7 @@ def test_repository_persists_one_runtime_row_per_rule_with_shared_timestamp(
     seeded_db_session,
 ) -> None:
     db = seeded_db_session
-    session = _score_reserved_session(db, "evaluado_22")
+    session = _score_reserved_session(db, REPOSITORY_PROFILE_PRIMARY)
     repository = RecommendationRepository()
     _context, recommendations = _recommendations(repository, db, session)
     expected_rule_results = tuple(
@@ -148,7 +152,7 @@ def test_repository_generation_writes_are_left_to_the_callers_transaction(
     seeded_db_session,
 ) -> None:
     db = seeded_db_session
-    session = _score_reserved_session(db, "evaluado_23")
+    session = _score_reserved_session(db, REPOSITORY_PROFILE_PRIMARY)
     repository = RecommendationRepository()
     _context, recommendations = _recommendations(repository, db, session)
     before = _result_count(db, session.id)
@@ -164,7 +168,7 @@ def test_repository_allows_multiple_generations_and_selects_latest_anchor(
     seeded_db_session,
 ) -> None:
     db = seeded_db_session
-    session = _score_reserved_session(db, "evaluado_24")
+    session = _score_reserved_session(db, REPOSITORY_PROFILE_SECONDARY)
     repository = RecommendationRepository()
     _context, recommendations = _recommendations(repository, db, session)
     first_at = datetime(2026, 8, 11, 12, 1, tzinfo=timezone.utc)

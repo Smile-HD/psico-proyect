@@ -31,6 +31,7 @@ EXPECTED_CATALOG = {
     "session.completed",
     "session.blocked_without_consent",
     "seed.executed",
+    "scoring.run",
 }
 
 

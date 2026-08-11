@@ -31,6 +31,7 @@ EVENT_CATALOG = {
     "session.completed",
     "session.blocked_without_consent",
     "seed.executed",
+    "scoring.run",
 }
 
 # Substrings that MUST NEVER appear in audit metadata (deny-list). Checks are

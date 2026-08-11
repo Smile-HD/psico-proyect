@@ -67,8 +67,9 @@ def _event_rows(db, session_id: UUID) -> list[AuditLog]:
 
 def test_score_persists_completed_runtime_run_and_aggregate_audit(seeded_db_session) -> None:
     db = seeded_db_session
-    user = _user("evaluado_01")
-    session = _completed_session(db)
+    profile = "evaluado_20"
+    user = _user(profile)
+    session = _completed_session(db, profile)
     service = ScoringService()
 
     status, result = service.score_session(db, user, session.id, {}, f"score-{uuid4().hex}")

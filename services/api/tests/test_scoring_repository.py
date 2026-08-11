@@ -19,13 +19,17 @@ from app.modules.scoring.errors import (
     session_not_completed,
 )
 from app.modules.scoring.repository import ScoringRepository
-from app.seed.loader import FIXTURES_DIR
+from app.seed.loader import FIXTURES_DIR, seed_id
 
 
-def _seeded_completed_session(db) -> Session:
+def _seeded_completed_session(db, profile: str = "evaluado_19") -> Session:
     session = db.scalar(
         select(Session)
-        .where(Session.source == "seed", Session.status == "completed")
+        .where(
+            Session.user_id == seed_id(profile),
+            Session.source == "seed",
+            Session.status == "completed",
+        )
         .order_by(Session.id)
     )
     assert session is not None

@@ -25,7 +25,7 @@ antes de tocar código y nunca inventes decisiones que ya están ratificadas.
 | ------ | ----------- |
 | Invariantes y reglas | `openspec/config.yaml` |
 | Especificaciones ratificadas | `openspec/specs/` (contratos, schema, identidad, auditoría, seed, catálogo) |
-| Cambio activo actual | Sin cambios activos — F1–F4 archivados; ver `HANDOFF-F4.md` y `openspec/changes/archive/` |
+| Cambio activo actual | Sin cambios activos — F1–F5 archivados; ver `HANDOFF-F4.md` y `openspec/changes/archive/` |
 | Contrato técnico | `packages/contracts/README.md` |
 | Arranque del entorno | `ONBOARDING.md` y `README.md` |
 

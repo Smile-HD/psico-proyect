@@ -74,12 +74,17 @@ Event catalog: `auth.login`, `auth.denied`, `user.role_changed`,
 `instrument.draft_created`, `instrument.draft_updated`, `instrument.published`,
 `instrument.archived`, `consent.granted`, `consent.revoked`, `session.started`,
 `session.completed`, `session.blocked_without_consent`, `seed.executed`,
-`scoring.run`.
+`scoring.run`, `recommendation.generated`.
 
 The `scoring.run` event metadata is aggregate-only: session, instrument-version,
 reference-set, and run identifiers, response/scale counts, and `computed_at`.
 It MUST NEVER contain response values, option keys, item content, or computed
 scores.
+
+The `recommendation.generated` event metadata is aggregate-only: session,
+program and rule identifiers, program/rule/result counts, and `generated_at`.
+It MUST NEVER contain fit scores, justification text, response values, option
+keys, item content, or computed scores.
 
 `audit_log` is append-only: a DB trigger rejects `UPDATE`/`DELETE`; the app
 role holds only `INSERT` + `SELECT` on it.
@@ -133,6 +138,7 @@ default-allow. See `services/api/app/core/permissions.py` (source of truth):
 | Run sessions | ✅ | ✅ | ✅ (own) |
 | Sign/view consent | ✅ (registry) | ✅ | ✅ (own) |
 | View results | ✅ | ✅ | ✅ (own) |
+| View recommendations | ✅ | ✅ | ✅ (own) |
 | View audit log | ✅ | ❌ | ❌ |
 | Run seeds / manifests | ✅ | ❌ | ❌ |
 

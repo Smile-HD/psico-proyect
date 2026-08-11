@@ -49,6 +49,7 @@ EXPECTED_MATRIX = {
     "run_sessions": {ADMIN, PSICOLOGO, EVALUADO},
     "sign_consent": {ADMIN, PSICOLOGO, EVALUADO},
     "view_results": {ADMIN, PSICOLOGO, EVALUADO},
+    "view_recommendations": {ADMIN, PSICOLOGO, EVALUADO},
     "view_audit": {ADMIN},
     "manage_seed": {ADMIN},
 }

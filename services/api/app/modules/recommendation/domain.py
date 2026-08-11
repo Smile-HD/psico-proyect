@@ -309,7 +309,7 @@ def evaluate_recommendations(
             raw_contribution = Decimal("100") * weight / total_weight if satisfied else _ZERO
             contribution = _round_fit(raw_contribution)
             outcome = "cumple" if satisfied else "no cumple"
-            justification = f"{scale} >= {minimum} pct: {outcome} ({percentile} pct)"
+            justification = f"{scale} ≥ {minimum} pct: {outcome} ({percentile} pct)"
             rule_results.append(
                 RecommendationRuleResult(
                     rule_id=rule.id,

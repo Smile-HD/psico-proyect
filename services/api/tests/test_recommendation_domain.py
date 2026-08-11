@@ -159,8 +159,8 @@ def test_weighted_fit_rounds_each_contribution_and_keeps_unsatisfied_at_zero() -
     ]
     assert recommendation.fit_score == Decimal("33.33")
     assert recommendation.justification == (
-        "Aptitud numérica >= 60 pct: cumple (72 pct); "
-        "Aptitud numérica >= 80 pct: no cumple (72 pct)"
+        "Aptitud numérica ≥ 60 pct: cumple (72 pct); "
+        "Aptitud numérica ≥ 80 pct: no cumple (72 pct)"
     )
 
 
@@ -223,8 +223,8 @@ def test_threshold_is_inclusive_trace_is_rule_id_ordered_and_domain_is_pure() ->
     assert first[0].rule_results[0].satisfied is True
     assert first[0].rule_results[1].satisfied is False
     assert first[0].justification == (
-        "Aptitud numérica >= 75 pct: cumple (75 pct); "
-        "Intereses >= 60 pct: no cumple (50 pct)"
+        "Aptitud numérica ≥ 75 pct: cumple (75 pct); "
+        "Intereses ≥ 60 pct: no cumple (50 pct)"
     )
 
     with pytest.raises(FrozenInstanceError):

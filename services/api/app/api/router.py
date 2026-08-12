@@ -10,6 +10,7 @@ from app.api.routes import (
     catalog,
     consent,
     recommendations,
+    reports,
     results,
     seed,
     sessions,
@@ -24,3 +25,4 @@ api_router.include_router(consent.router)
 api_router.include_router(catalog.router)
 api_router.include_router(results.router)
 api_router.include_router(recommendations.router)
+api_router.include_router(reports.router)

@@ -1,0 +1,8 @@
+{
+  "key": "informe-basico",
+  "name": "Informe básico de orientación",
+  "description": "Plantilla sintética de investigación para el informe profesional.",
+  "version_no": 1,
+  "status": "published",
+  "template_body": "Informe de orientación\nSesión: {{session_id}}\n\nPuntuaciones por escala:\n{{scores}}\n\nPuntuación general:\n{{overall}}\n\nRecomendaciones por programa:\n{{recommendations}}\n\nBaremo:\n{{norm_note}}\n\nDescargo de responsabilidad:\n{{disclaimer}}"
+}

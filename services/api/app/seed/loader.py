@@ -21,7 +21,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import delete, func, select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -40,13 +40,14 @@ from app.models.instruments import (
     Scale,
 )
 from app.models.recommendation import RecommendationRule
+from app.models.reporting import ReportTemplate
 from app.models.scoring import ReferenceSet, ReferenceValue
 from app.models.seed import SeedManifest
 from app.models.sessions import Response, Session
 
 logger = logging.getLogger("psico.seed")
 
-SEED_VERSION = "1.1.0"
+SEED_VERSION = "1.2.0"
 SEED_OPTION_LABELS = (
     "Nunca",
     "Casi nunca",
@@ -79,6 +80,7 @@ SEED_TABLES = [
     "reference_values",
     "recommendation_rules",
     "recommendation_results",
+    "report_templates",
 ]
 
 # Reverse FK order for --reset (children before parents).
@@ -323,6 +325,24 @@ def _seed_rows(db: Session) -> None:
                 "source": "seed",
             },
         )
+
+    # --- default professional report template (F6) ----------------------------
+    template_fixture = _load_json("report_template.json")
+    _upsert(
+        db,
+        ReportTemplate,
+        {
+            "id": seed_id("report-template:informe-basico"),
+            "key": template_fixture["key"],
+            "name": template_fixture["name"],
+            "description": template_fixture.get("description"),
+            "template_body": template_fixture["template_body"],
+            "version_no": template_fixture["version_no"],
+            "status": template_fixture["status"],
+            "synthetic": True,
+            "source": "seed",
+        },
+    )
 
     # --- instrument TP-S-01 (20 items, version 1, published + immutable) ------
     items = _load_json("items.json")
@@ -608,7 +628,38 @@ def _seed_reset_preflight(db: Session) -> None:
                   rule_id IN (SELECT id FROM recommendation_rules WHERE source = 'seed')
                   OR program_id IN (SELECT id FROM programs WHERE source = 'seed')
                   OR session_id IN (SELECT id FROM sessions WHERE source = 'seed')
+               )
+           """,
+        "score_runs": """
+            SELECT id FROM score_runs
+            WHERE source <> 'seed'
+              AND (
+                  session_id IN (SELECT id FROM sessions WHERE source = 'seed')
+                  OR reference_set_id IN (
+                      SELECT id FROM reference_sets WHERE source = 'seed'
+                  )
               )
+        """,
+        "reports": """
+            SELECT id FROM reports
+            WHERE source <> 'seed'
+              AND (
+                  session_id IN (SELECT id FROM sessions WHERE source = 'seed')
+                  OR score_run_id IN (
+                      SELECT id FROM score_runs
+                      WHERE session_id IN (SELECT id FROM sessions WHERE source = 'seed')
+                         OR reference_set_id IN (
+                             SELECT id FROM reference_sets WHERE source = 'seed'
+                         )
+                  )
+                  OR template_id IN (
+                      SELECT id FROM report_templates WHERE source = 'seed'
+                  )
+              )
+        """,
+        "idempotency_records": """
+            SELECT id FROM idempotency_records
+            WHERE actor_user_id IN (SELECT id FROM users WHERE source = 'seed')
         """,
     }
     conflicts: list[str] = []
@@ -624,7 +675,7 @@ def _reset_seed_rows(db: Session) -> None:
     """Delete seed-owned rows only (source='seed'), children before parents."""
     for table in SEED_TABLES_REVERSE:
         db.execute(text(f"DELETE FROM {table} WHERE source = 'seed'"))
-    db.execute(delete(SeedManifest))
+    # Manifest rows are append-only run history, not seed-owned domain data.
 
 
 def run_seed(db: Session) -> dict:

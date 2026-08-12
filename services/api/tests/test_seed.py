@@ -12,7 +12,9 @@ DB tests (skip without PostgreSQL):
 from __future__ import annotations
 
 import json
+import hashlib
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -25,8 +27,13 @@ from app.models.consent import ConsentGrant
 from app.models.institutions import Program
 from app.models.instruments import InstrumentItem
 from app.models.recommendation import RecommendationResult, RecommendationRule
+from app.models.reporting import Report, ReportArtifact, ReportTemplate
 from app.models.scoring import ReferenceSet
+from app.models.scoring import ScoreRun
 from app.models.seed import SeedManifest
+from app.models.identity import User
+from app.models.idempotency import IdempotencyRecord
+from app.models.instruments import Instrument, InstrumentVersion
 from app.models.sessions import Response, Session
 from app.seed.loader import (
     FIXTURES_DIR,
@@ -34,6 +41,7 @@ from app.seed.loader import (
     SEED_VERSION,
     SeedResetConflictError,
     collect_counts,
+    fixtures_checksum,
     reset_seed,
     run_seed,
     seed_id,
@@ -461,8 +469,10 @@ def test_f5_f6_seed_state_after_seed(engine, db_session) -> None:
     run_seed(db_session)
     assert db_session.scalar(text("SELECT COUNT(*) FROM recommendation_rules")) > 0
     assert db_session.scalar(text("SELECT COUNT(*) FROM recommendation_results")) == 0
-    for table in ("reports", "report_templates"):
-        assert db_session.scalar(text(f"SELECT COUNT(*) FROM {table}")) == 0
+    assert db_session.scalar(text("SELECT COUNT(*) FROM reports")) == 0
+    assert db_session.scalar(
+        text("SELECT COUNT(*) FROM report_templates WHERE source = 'seed'")
+    ) == 1
 
 
 def test_seed_executed_audited(engine, db_session) -> None:
@@ -471,3 +481,309 @@ def test_seed_executed_audited(engine, db_session) -> None:
         text("SELECT COUNT(*) FROM audit_log WHERE event_type = 'seed.executed'")
     )
     assert events >= 1
+
+
+def test_report_template_fixture_is_literal_spanish_seed_data() -> None:
+    fixture = json.loads(
+        (FIXTURES_DIR / "report_template.json").read_text(encoding="utf-8")
+    )
+    assert fixture["key"] == "informe-basico"
+    assert fixture["version_no"] == 1
+    assert fixture["status"] == "published"
+    assert set(
+        token for token in ("{{session_id}}", "{{scores}}", "{{overall}}", "{{recommendations}}", "{{norm_note}}", "{{disclaimer}}")
+        if token in fixture["template_body"]
+    ) == {
+        "{{session_id}}",
+        "{{scores}}",
+        "{{overall}}",
+        "{{recommendations}}",
+        "{{norm_note}}",
+        "{{disclaimer}}",
+    }
+    assert "{%" not in fixture["template_body"]
+
+
+def test_report_template_is_seeded_once_and_manifested(engine, db_session) -> None:
+    reset_seed(db_session)
+    run_seed(db_session)
+    first = db_session.scalar(
+        select(ReportTemplate).where(ReportTemplate.key == "informe-basico")
+    )
+    assert first is not None
+    assert first.id == seed_id("report-template:informe-basico")
+    assert first.id.version == 5
+    assert first.version_no == 1
+    assert first.status == "published"
+    assert first.synthetic is True and first.source == "seed"
+    assert db_session.scalar(
+        text("SELECT COUNT(*) FROM report_templates WHERE key = 'informe-basico'")
+    ) == 1
+
+    template_snapshot = (first.id, first.template_body)
+    run_seed(db_session)
+    second = db_session.scalar(
+        select(ReportTemplate).where(ReportTemplate.key == "informe-basico")
+    )
+    assert second is not None
+    assert (second.id, second.template_body) == template_snapshot
+    assert db_session.scalar(
+        text("SELECT COUNT(*) FROM report_templates WHERE key = 'informe-basico'")
+    ) == 1
+
+
+def test_reset_appends_manifest_without_changing_seed_template_identity(
+    engine, db_session
+) -> None:
+    reset_seed(db_session)
+    run_seed(db_session)
+    template_id = db_session.scalar(
+        select(ReportTemplate.id).where(ReportTemplate.key == "informe-basico")
+    )
+    before_manifests = db_session.scalar(select(func.count()).select_from(SeedManifest))
+
+    reset_seed(db_session)
+
+    after_manifests = db_session.scalar(select(func.count()).select_from(SeedManifest))
+    assert after_manifests == before_manifests + 1
+    assert db_session.scalar(
+        select(ReportTemplate.id).where(ReportTemplate.key == "informe-basico")
+    ) == template_id
+    assert db_session.scalar(text("SELECT COUNT(*) FROM score_runs")) == 0
+    assert db_session.scalar(text("SELECT COUNT(*) FROM reports")) == 0
+
+    manifest = db_session.scalar(
+        select(SeedManifest).order_by(SeedManifest.executed_at.desc())
+    )
+    assert manifest is not None
+    assert manifest.counts["report_templates"] == 1
+    assert manifest.checksum == fixtures_checksum()
+    assert SEED_VERSION != "1.1.0"
+
+
+def test_seed_reset_preflight_rejects_runtime_reporting_dependencies_atomically(
+    engine, db_session
+) -> None:
+    reset_seed(db_session)
+    run_seed(db_session)
+    seed_session_id = seed_id("session:evaluado_01")
+    reference_id = seed_id("RS-TP-S-01")
+    runtime_score_run_id = uuid.uuid4()
+    db_session.execute(
+        text(
+            "INSERT INTO score_runs "
+            "(id, session_id, reference_set_id, status, raw, synthetic, source) "
+            "VALUES (:id, :session_id, :reference_set_id, 'completed', '{}'::jsonb, false, 'runtime')"
+        ),
+        {
+            "id": runtime_score_run_id,
+            "session_id": seed_session_id,
+            "reference_set_id": reference_id,
+        },
+    )
+    db_session.commit()
+    before = {
+        "templates": db_session.scalar(text("SELECT COUNT(*) FROM report_templates WHERE source = 'seed'")),
+        "score_runs": db_session.scalar(text("SELECT COUNT(*) FROM score_runs")),
+        "manifests": db_session.scalar(text("SELECT COUNT(*) FROM seed_manifest")),
+    }
+
+    with pytest.raises(SeedResetConflictError) as error:
+        reset_seed(db_session)
+
+    assert str(error.value) == "seed_reset_dependency_conflict"
+    assert {
+        "templates": db_session.scalar(text("SELECT COUNT(*) FROM report_templates WHERE source = 'seed'")),
+        "score_runs": db_session.scalar(text("SELECT COUNT(*) FROM score_runs")),
+        "manifests": db_session.scalar(text("SELECT COUNT(*) FROM seed_manifest")),
+    } == before
+    assert db_session.get(ScoreRun, runtime_score_run_id) is not None
+
+    db_session.execute(text("DELETE FROM score_runs WHERE id = :id"), {"id": runtime_score_run_id})
+    db_session.commit()
+
+
+def test_runtime_report_score_run_artifact_and_template_survive_seed_reset(
+    engine, db_session
+) -> None:
+    reset_seed(db_session)
+    run_seed(db_session)
+
+    runtime_user = User(
+        id=uuid.uuid4(),
+        username=f"runtime-report-{uuid.uuid4().hex[:8]}",
+        password_hash="hash",
+        full_name="Synthetic runtime report user",
+        synthetic=False,
+        source="runtime",
+    )
+    runtime_instrument = Instrument(
+        id=uuid.uuid4(),
+        key=f"RUNTIME-REPORT-{uuid.uuid4().hex[:8]}",
+        title="Synthetic runtime report instrument",
+        synthetic=False,
+        source="runtime",
+    )
+    runtime_version = InstrumentVersion(
+        id=uuid.uuid4(),
+        instrument_id=runtime_instrument.id,
+        version_no=1,
+        status="draft",
+        is_immutable=False,
+        synthetic=False,
+        source="runtime",
+    )
+    runtime_reference = ReferenceSet(
+        id=uuid.uuid4(),
+        key=f"RUNTIME-REPORT-REF-{uuid.uuid4().hex[:8]}",
+        instrument_version_id=runtime_version.id,
+        reference_status="synthetic",
+        use="research-only",
+        norm_note="Synthetic runtime reference note.",
+        synthetic=False,
+        source="runtime",
+    )
+    runtime_session = Session(
+        id=uuid.uuid4(),
+        user_id=runtime_user.id,
+        instrument_version_id=runtime_version.id,
+        status="completed",
+        completed_at=datetime.now(timezone.utc),
+        synthetic=False,
+        source="runtime",
+    )
+    runtime_score_run = ScoreRun(
+        id=uuid.uuid4(),
+        session_id=runtime_session.id,
+        reference_set_id=runtime_reference.id,
+        status="completed",
+        raw={"synthetic": True},
+        synthetic=False,
+        source="runtime",
+    )
+    runtime_template = ReportTemplate(
+        id=uuid.uuid4(),
+        key=f"runtime-report-template-{uuid.uuid4().hex[:8]}",
+        name="Synthetic runtime template",
+        template_body="{{session_id}} {{scores}} {{overall}} {{recommendations}} {{norm_note}} {{disclaimer}}",
+        version_no=1,
+        status="published",
+        synthetic=False,
+        source="runtime",
+    )
+    runtime_report = Report(
+        id=uuid.uuid4(),
+        session_id=runtime_session.id,
+        score_run_id=runtime_score_run.id,
+        template_id=runtime_template.id,
+        template_version_no=1,
+        recommendation_snapshot={"items": []},
+        format="pdf",
+        status="ready",
+        storage_key=str(uuid.uuid4()),
+        sha256=hashlib.sha256(b"runtime-pdf").hexdigest(),
+        byte_size=len(b"runtime-pdf"),
+        media_type="application/pdf",
+        renderer_version="runtime-test",
+        generated_at=datetime.now(timezone.utc),
+        synthetic=False,
+        source="runtime",
+    )
+    runtime_artifact = ReportArtifact(
+        storage_key=runtime_report.storage_key,
+        report_id=runtime_report.id,
+        payload=b"runtime-pdf",
+        sha256=runtime_report.sha256,
+        byte_size=runtime_report.byte_size,
+        media_type="application/pdf",
+    )
+    db_session.add_all(
+        [runtime_user, runtime_instrument, runtime_template]
+    )
+    db_session.flush()
+    db_session.add_all([runtime_version, runtime_reference, runtime_session])
+    db_session.flush()
+    db_session.add(runtime_score_run)
+    db_session.flush()
+    db_session.add_all([runtime_report, runtime_artifact])
+    db_session.commit()
+
+    reset_seed(db_session)
+
+    assert db_session.get(ScoreRun, runtime_score_run.id) is not None
+    assert db_session.get(Report, runtime_report.id) is not None
+    assert db_session.get(ReportArtifact, runtime_artifact.storage_key) is not None
+    assert db_session.get(ReportTemplate, runtime_template.id) is not None
+    assert db_session.get(ReportTemplate, seed_id("report-template:informe-basico")) is not None
+
+
+def test_seed_reset_preflight_rejects_runtime_report_over_seed_template(
+    engine, db_session
+) -> None:
+    reset_seed(db_session)
+    run_seed(db_session)
+    template = db_session.get(
+        ReportTemplate, seed_id("report-template:informe-basico")
+    )
+    assert template is not None
+    runtime_report = Report(
+        id=uuid.uuid4(),
+        session_id=seed_id("session:evaluado_01"),
+        template_id=template.id,
+        template_version_no=template.version_no,
+        format="pdf",
+        status="pending",
+        synthetic=False,
+        source="runtime",
+    )
+    db_session.add(runtime_report)
+    db_session.commit()
+    before = (
+        db_session.scalar(text("SELECT COUNT(*) FROM report_templates WHERE source = 'seed'")),
+        db_session.scalar(text("SELECT COUNT(*) FROM reports")),
+    )
+
+    with pytest.raises(SeedResetConflictError) as error:
+        reset_seed(db_session)
+
+    assert str(error.value) == "seed_reset_dependency_conflict"
+    assert (
+        db_session.scalar(text("SELECT COUNT(*) FROM report_templates WHERE source = 'seed'")),
+        db_session.scalar(text("SELECT COUNT(*) FROM reports")),
+    ) == before
+    assert db_session.get(Report, runtime_report.id) is not None
+    db_session.delete(runtime_report)
+    db_session.commit()
+
+
+def test_seed_reset_preflight_rejects_runtime_idempotency_for_seed_user(
+    engine, db_session
+) -> None:
+    reset_seed(db_session)
+    run_seed(db_session)
+    record_id = uuid.uuid4()
+    db_session.execute(
+        text(
+            "INSERT INTO idempotency_records "
+            "(id, actor_user_id, operation, resource_scope, idempotency_key, "
+            "request_hash, response_status, response_body) "
+            "VALUES (:id, :actor_user_id, 'report.generated', 'session:test', "
+            "'seed-reset-idempotency', :request_hash, 200, '{}'::jsonb)"
+        ),
+        {
+            "id": record_id,
+            "actor_user_id": seed_id("user:admin"),
+            "request_hash": "a" * 64,
+        },
+    )
+    db_session.commit()
+
+    with pytest.raises(SeedResetConflictError) as error:
+        reset_seed(db_session)
+
+    assert str(error.value) == "seed_reset_dependency_conflict"
+    assert db_session.get(IdempotencyRecord, record_id) is not None
+    db_session.execute(
+        text("DELETE FROM idempotency_records WHERE id = :id"), {"id": record_id}
+    )
+    db_session.commit()

@@ -190,5 +190,5 @@ def test_f1_backfill_upgrade_is_idempotent(migrated_f1_db) -> None:
         migrated_f1_db.execute(
             text("SELECT version_num FROM alembic_version")
         ).scalar_one()
-        == "0005_catalog_four_level"
+        == "0006_reports_pdf"
     )

@@ -19,8 +19,10 @@ from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.pool import NullPool
 
+from app.models.reporting import Report, ReportArtifact, ReportTemplate
 from tests.db_utils import SKIP_MESSAGE, db_reachable, db_url, maintenance_url
 from tests.conftest import alembic_config
 
@@ -53,6 +55,7 @@ EXPECTED_TABLES = {
     "recommendation_results",
     "reports",
     "report_templates",
+    "report_artifacts",
     # audit + consent + seed bookkeeping
     "audit_log",
     "consent_versions",
@@ -105,6 +108,54 @@ KEY_COLUMNS = {
     "sessions": {"user_id", "consent_grant_id", "status"},
     "responses": {"session_id", "item_id", "value"},
     "reference_sets": {"key", "reference_status", "use", "norm_note"},
+    "score_runs": {
+        "session_id",
+        "reference_set_id",
+        "status",
+        "raw",
+        "computed_at",
+        "synthetic",
+        "source",
+    },
+    "report_templates": {
+        "key",
+        "name",
+        "description",
+        "template_body",
+        "version_no",
+        "status",
+        "synthetic",
+        "source",
+    },
+    "reports": {
+        "session_id",
+        "score_run_id",
+        "template_id",
+        "template_version_no",
+        "recommendation_snapshot",
+        "format",
+        "status",
+        "storage_key",
+        "sha256",
+        "byte_size",
+        "media_type",
+        "renderer_version",
+        "generated_at",
+        "created_at",
+        "updated_at",
+        "failed_at",
+        "synthetic",
+        "source",
+    },
+    "report_artifacts": {
+        "storage_key",
+        "report_id",
+        "payload",
+        "sha256",
+        "byte_size",
+        "media_type",
+        "created_at",
+    },
     "audit_log": {"event_type", "actor_user_id", "metadata", "occurred_at"},
     "consent_versions": {"version_no", "title", "body", "is_active"},
     "consent_grants": {"state", "signed_at"},
@@ -173,6 +224,91 @@ def test_unique_constraints_present(schema_url: str) -> None:
             f"{table} missing unique on {expected_cols}; got {uq_cols}"
         )
 
+    template_uq = {
+        tuple(uc.get("column_names") or [])
+        for uc in inspector.get_unique_constraints("report_templates")
+    }
+    assert ("key", "version_no") in template_uq
+    assert ("key",) not in template_uq
+
+
+def test_reporting_models_match_migrated_columns(schema_url: str) -> None:
+    inspector = inspect(_schema_engine(schema_url))
+    for model in (ReportTemplate, Report, ReportArtifact):
+        database_columns = {column["name"] for column in inspector.get_columns(model.__tablename__)}
+        model_columns = set(model.__table__.columns.keys())
+        assert model_columns == database_columns, (
+            f"{model.__tablename__} model/schema drift: "
+            f"model-only={sorted(model_columns - database_columns)}, "
+            f"schema-only={sorted(database_columns - model_columns)}"
+        )
+
+    report_foreign_keys = inspector.get_foreign_keys("reports")
+    assert any(
+        foreign_key["constrained_columns"] == ["score_run_id"]
+        and foreign_key["referred_table"] == "score_runs"
+        and foreign_key["referred_columns"] == ["id"]
+        for foreign_key in report_foreign_keys
+    )
+    assert not any(
+        set(foreign_key["constrained_columns"]) == {"session_id"}
+        and foreign_key.get("referred_table") == "report_templates"
+        for foreign_key in report_foreign_keys
+    )
+
+
+def test_report_check_constraints_use_ratified_vocabularies(schema_url: str) -> None:
+    inspector = inspect(_schema_engine(schema_url))
+    checks = {
+        constraint["name"]: str(constraint.get("sqltext", ""))
+        for table in ("reports", "report_templates")
+        for constraint in inspector.get_check_constraints(table)
+    }
+    assert "ck_report_status" in checks
+    assert all(value in checks["ck_report_status"] for value in ("pending", "processing", "ready", "failed"))
+    assert "ck_report_format" in checks
+    assert "pdf" in checks["ck_report_format"]
+    assert "ck_report_template_status" in checks
+    assert all(value in checks["ck_report_template_status"] for value in ("draft", "published", "retired"))
+    assert "ck_report_ready_artifact" in checks
+    assert "ck_report_failed_without_artifact" in checks
+
+
+def test_report_template_published_rows_are_immutable(schema_url: str) -> None:
+    engine = _schema_engine(schema_url)
+    template_id = uuid.uuid4()
+    template_key = f"schema-template-{template_id}"
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO report_templates "
+                "(id, key, name, template_body, version_no, status, synthetic, source) "
+                "VALUES (:id, :key, 'Schema template', 'original', 1, 'published', false, 'runtime')"
+            ),
+            {"id": template_id, "key": template_key},
+        )
+
+    with pytest.raises(DBAPIError):
+        with engine.begin() as conn:
+            conn.execute(
+                text("UPDATE report_templates SET template_body = 'changed' WHERE id = :id"),
+                {"id": template_id},
+            )
+
+    with engine.begin() as conn:
+        conn.execute(
+            text("UPDATE report_templates SET status = 'retired' WHERE id = :id"),
+            {"id": template_id},
+        )
+        body = conn.execute(
+            text("SELECT template_body FROM report_templates WHERE id = :id"),
+            {"id": template_id},
+        ).scalar_one()
+    with engine.begin() as conn:
+        conn.execute(text("TRUNCATE reports, report_templates"))
+    engine.dispose()
+    assert body == "original"
+
 
 def test_check_constraints_present(schema_url: str) -> None:
     inspector = inspect(_schema_engine(schema_url))
@@ -207,13 +343,15 @@ def test_upgrade_is_idempotent(schema_url: str) -> None:
             text("SELECT version_num FROM alembic_version")
         ).scalar()
     engine.dispose()
-    assert revision == "0005_catalog_four_level"
+    assert revision == "0006_reports_pdf"
 
 
 def test_linear_history() -> None:
     script = ScriptDirectory.from_config(Config("alembic.ini"))
     heads = script.get_heads()
     assert len(heads) == 1, f"expected a single head, got {heads}"
+    reporting_revision = script.get_revision("0006_reports_pdf")
+    assert reporting_revision.down_revision == "0005_catalog_four_level"
     # Every revision except the head must have exactly one child.
     for revision in script.walk_revisions():
         if revision.revision not in heads:
@@ -248,3 +386,16 @@ def test_append_only_trigger_installed(schema_url: str) -> None:
         names = {row[0] for row in rows}
     engine.dispose()
     assert "trg_audit_append_only" in names
+
+
+def test_report_template_immutability_trigger_installed(schema_url: str) -> None:
+    engine = _schema_engine(schema_url)
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT tgname FROM pg_trigger "
+                "WHERE tgrelid = 'report_templates'::regclass AND NOT tgisinternal"
+            )
+        ).fetchall()
+    engine.dispose()
+    assert "trg_report_template_published_immutability" in {row[0] for row in rows}

@@ -74,7 +74,7 @@ Event catalog: `auth.login`, `auth.denied`, `user.role_changed`,
 `instrument.draft_created`, `instrument.draft_updated`, `instrument.published`,
 `instrument.archived`, `consent.granted`, `consent.revoked`, `session.started`,
 `session.completed`, `session.blocked_without_consent`, `seed.executed`,
-`scoring.run`, `recommendation.generated`.
+`scoring.run`, `recommendation.generated`, `report.generated`.
 
 The `scoring.run` event metadata is aggregate-only: session, instrument-version,
 reference-set, and run identifiers, response/scale counts, and `computed_at`.
@@ -85,6 +85,16 @@ The `recommendation.generated` event metadata is aggregate-only: session,
 program and rule identifiers, program/rule/result counts, and `generated_at`.
 It MUST NEVER contain fit scores, justification text, response values, option
 keys, item content, or computed scores.
+
+The `report.generated` event metadata is aggregate-only: session, report, and
+template identifiers, `template_version_no`, the `processing->ready`
+transition, `sha256`, `byte_size`, and `created_at`/`generated_at` timestamps.
+It MUST NEVER contain the report body, scores, justifications, PDF bytes,
+storage keys, tokens, or internal paths.
+
+Report generation uses the same professional-only capability for generation,
+metadata reads, and authenticated downloads; evaluado is denied for every
+report operation.
 
 `audit_log` is append-only: a DB trigger rejects `UPDATE`/`DELETE`; the app
 role holds only `INSERT` + `SELECT` on it.
@@ -139,6 +149,7 @@ default-allow. See `services/api/app/core/permissions.py` (source of truth):
 | Sign/view consent | ✅ (registry) | ✅ | ✅ (own) |
 | View results | ✅ | ✅ | ✅ (own) |
 | View recommendations | ✅ | ✅ | ✅ (own) |
+| View reports (generate/read/download) | ✅ | ✅ | ❌ |
 | View audit log | ✅ | ❌ | ❌ |
 | Run seeds / manifests | ✅ | ❌ | ❌ |
 

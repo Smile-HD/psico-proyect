@@ -31,6 +31,7 @@ CAPABILITIES: dict[str, set[str]] = {
     "sign_consent": {ADMIN, PSICOLOGO, EVALUADO},
     "view_results": {ADMIN, PSICOLOGO, EVALUADO},
     "view_recommendations": {ADMIN, PSICOLOGO, EVALUADO},
+    "view_reports": {ADMIN, PSICOLOGO},
     "view_audit": {ADMIN},
     "manage_seed": {ADMIN},
 }

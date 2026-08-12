@@ -33,6 +33,7 @@ EVENT_CATALOG = {
     "seed.executed",
     "scoring.run",
     "recommendation.generated",
+    "report.generated",
 }
 
 # Substrings that MUST NEVER appear in audit metadata (deny-list). Checks are

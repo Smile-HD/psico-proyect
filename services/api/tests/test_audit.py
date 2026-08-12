@@ -33,6 +33,7 @@ EXPECTED_CATALOG = {
     "seed.executed",
     "scoring.run",
     "recommendation.generated",
+    "report.generated",
 }
 
 
@@ -74,6 +75,66 @@ def test_unknown_event_type_rejected() -> None:
 
     with pytest.raises(ValueError):
         audit_core.record(_DB(), "made.up.event")
+
+
+def test_report_generated_event_contract_is_aggregate_only() -> None:
+    class _DB:
+        def __init__(self):
+            self.rows = []
+
+        def add(self, row):
+            self.rows.append(row)
+
+    metadata = {
+        "session_id": str(uuid.uuid4()),
+        "report_id": str(uuid.uuid4()),
+        "template_id": str(uuid.uuid4()),
+        "template_version_no": 1,
+        "transition": "processing->ready",
+        "sha256": "a" * 64,
+        "byte_size": 1234,
+        "created_at": "2026-08-11T12:00:00+00:00",
+        "generated_at": "2026-08-11T12:30:00+00:00",
+    }
+    db = _DB()
+
+    row = audit_core.record(
+        db,
+        "report.generated",
+        actor_user_id=uuid.uuid4(),
+        actor_role="psicólogo",
+        resource_type="report",
+        resource_id=metadata["report_id"],
+        action="generate",
+        metadata=metadata,
+    )
+
+    assert row.event_type == "report.generated"
+    assert row.metadata_ == metadata
+    assert set(row.metadata_) == {
+        "session_id",
+        "report_id",
+        "template_id",
+        "template_version_no",
+        "transition",
+        "sha256",
+        "byte_size",
+        "created_at",
+        "generated_at",
+    }
+    serialized = str(row.metadata_).lower()
+    assert not any(
+        forbidden in serialized
+        for forbidden in (
+            "body",
+            "score",
+            "justification",
+            "pdf",
+            "storage_key",
+            "token",
+            "path",
+        )
+    )
 
 
 # --------------------------------------------------------------------------- #

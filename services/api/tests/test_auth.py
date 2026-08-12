@@ -35,6 +35,7 @@ from app.core.permissions import (
     EVALUADO,
     PSICOLOGO,
     ROLES,
+    has_capability,
     require_roles,
 )
 from app.main import app
@@ -50,6 +51,7 @@ EXPECTED_MATRIX = {
     "sign_consent": {ADMIN, PSICOLOGO, EVALUADO},
     "view_results": {ADMIN, PSICOLOGO, EVALUADO},
     "view_recommendations": {ADMIN, PSICOLOGO, EVALUADO},
+    "view_reports": {ADMIN, PSICOLOGO},
     "view_audit": {ADMIN},
     "manage_seed": {ADMIN},
 }
@@ -82,6 +84,12 @@ def _make_user(role: str) -> FakeUser:
 def test_capability_matrix_matches_contract() -> None:
     assert CAPABILITIES == EXPECTED_MATRIX
     assert set(ROLES) == {ADMIN, PSICOLOGO, EVALUADO}
+
+
+def test_view_reports_is_professional_only() -> None:
+    assert has_capability({ADMIN}, "view_reports")
+    assert has_capability({PSICOLOGO}, "view_reports")
+    assert not has_capability({EVALUADO}, "view_reports")
 
 
 def test_require_roles_admin_allowed() -> None:
